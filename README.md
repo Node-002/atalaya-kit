@@ -1,4 +1,6 @@
-# HuelaEstafa Guard — guardián de correo para organizaciones
+# Atalaya — el agente que vigila tu correo
+
+> Equipo: **Sentinel Zero** (un integrante). Nombre anterior del proyecto: HuelaEstafa Guard.
 
 > Dojo AI Hackathon · 20–22 de noviembre de 2026 · Proyecto en solitario
 

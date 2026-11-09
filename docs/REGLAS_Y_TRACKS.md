@@ -28,7 +28,7 @@
 (El monto se tomó de una captura; confirmá en Dojo si hay otros premios, cómo se elige el track y si se puede participar en ambos.)
 
 ## Cuál elegir: Track 02 — AI Operators
-HuelaEstafa Guard encaja en los dos, pero **mejor en el 02**, porque ya es un proceso de principio a fin con una persona en el circuito:
+Atalaya encaja en los dos, pero **mejor en el 02**, porque ya es un proceso de principio a fin con una persona en el circuito:
 
 | Lo que pide el track | Cómo lo cumple tu proyecto |
 |---|---|

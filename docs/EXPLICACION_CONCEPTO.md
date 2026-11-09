@@ -2,7 +2,7 @@ Imaginá que trabajás en una empresa pequeña. Todos los días te llegan decena
 
 El problema es que las empresas pequeñas, los colegios y las universidades casi nunca tienen un equipo de seguridad que revise cada correo. Entonces la protección depende de que cada empleado se dé cuenta a tiempo. Y a veces nadie se da cuenta.
 
-Este proyecto se llama HuelaEstafa Guard. Es como un guardia de seguridad para el correo.
+Este proyecto se llama Atalaya. Es como un guardia de seguridad para el correo.
 
 Funciona así. Primero, la persona entra al sistema con el botón de iniciar sesión con Google, sin escribir contraseña, y acepta de forma clara que el sistema revise sus correos nuevos. Eso se llama dar consentimiento, y es muy importante.
 

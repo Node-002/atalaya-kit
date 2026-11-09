@@ -1,4 +1,4 @@
-# Plan de trabajo — HuelaEstafa Guard
+# Plan de trabajo — Atalaya
 
 Hoy: 8 nov. Hackathon: 20–22 nov. Entrega: **domingo 22**. Trabajo en solitario.
 

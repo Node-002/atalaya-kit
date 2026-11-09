@@ -5,8 +5,8 @@ Criterios (1–5): **Uso diario**, **Factibilidad solo en 3 días**, **Demo visu
 
 | # | Idea | Diario | Factible | Demo | Difer. | Cyber | Negocio | Total |
 |---|------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| 1 | **HuelaEstafa Guard**: guardián automático de correo para organizaciones | 5 | 3 | 5 | 5 | 5 | 5 | **28** |
-| 2 | HuelaEstafa (pegar un mensaje y analizarlo) | 5 | 5 | 5 | 3 | 5 | 2 | 25 |
+| 1 | **Atalaya**: guardián automático de correo para organizaciones | 5 | 3 | 5 | 5 | 5 | 5 | **28** |
+| 2 | Detector manual de mensajes, idea previa (pegar un mensaje y analizarlo) | 5 | 5 | 5 | 3 | 5 | 2 | 25 |
 | 3 | Escáner de secretos/fallos en código generado con IA | 3 | 4 | 4 | 3 | 5 | 3 | 22 |
 | 4 | Copiloto de incidentes para pymes | 2 | 4 | 3 | 3 | 5 | 3 | 20 |
 | 5 | FacturaCR (IVA con IA) | 3 | 4 | 4 | 3 | 1 | 3 | 18 |
