@@ -1,0 +1,35 @@
+# Secretos: nunca versionar
+.env
+.env.*
+*.pem
+*.key
+client_secret*.json
+credentials*.json
+token*.json
+*.token
+secrets/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Datos locales
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Archivos pesados / generados
+*.wav
+node_modules/
+dist/
+build/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

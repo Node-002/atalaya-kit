@@ -1,0 +1,29 @@
+Tenés razón en dudar. La idea de proteger el correo con análisis automático no es nueva. Ya existen productos grandes que hacen algo parecido.
+
+Por ejemplo, Google Workspace y Microsoft Defender tienen protecciones incluidas. Empresas como Proofpoint, Mimecast y Barracuda filtran el correo de empresas enormes. Y otras más nuevas, como Abnormal Security, Check Point Harmony Email, IRONSCALES y Sublime Security, se conectan a la bandeja y usan inteligencia artificial. También están KnowBe4 y Cofense, que se dedican a entrenar al personal con simulacros de phishing.
+
+Entonces, ¿qué sentido tiene tu proyecto? Que no vas a ganar por inventar algo nuevo, ni por detectar mejor que ellos. Vas a ganar por resolver mejor lo que ellos resuelven mal, para quienes ellos atienden mal.
+
+Y estas son sus debilidades más comunes.
+
+Primera: son caros y complicados. Están pensados para empresas medianas o grandes con un equipo de tecnología. Un colegio, una universidad o una pyme muchas veces no puede pagarlos ni configurarlos. Tu sistema puede estar listo en minutos.
+
+Segunda: casi todo está en inglés. Las alertas, el entrenamiento y los ejemplos no conocen las estafas de Costa Rica, como los mensajes falsos de bancos, de SINPE Móvil o de Correos. El tuyo sí puede conocerlas, y hablar en español sencillo.
+
+Tercera: son una caja negra. Muchas veces solo dicen "bloqueado", sin explicar por qué. Tu sistema muestra las señales concretas y una explicación clara.
+
+Cuarta: la privacidad. Algunos exponen el contenido de los correos al administrador o lo guardan en la nube del proveedor. En el tuyo, el encargado ve alertas, no correos, y solo se guarda el resultado del análisis.
+
+Quinta: detectan, pero no enseñan. El entrenamiento va aparte. Podrías convertir cada amenaza real que se detecta en una mini lección para el empleado.
+
+Y sexta: no siempre queda claro qué cuentas están protegidas. Tu panel de cobertura muestra cuáles están conectadas, cuáles se vencieron y cuáles se desconectaron.
+
+Tu propuesta, en una frase: seguridad de correo en español, explicada y respetuosa de la privacidad, lista en minutos y accesible para quienes no pueden pagar las soluciones grandes.
+
+Ahora, la parte honesta. No prometas detectar más que Microsoft o Google. No prometas protección total. Y no digas que nadie lo ha hecho. Mejor decí qué haces distinto y para quién.
+
+También reconocé tus límites. Es un proyecto hecho en tres días, sin años de datos. Depende de servicios externos. Y Google exige una verificación para uso público.
+
+Para el hackathon, enfocate en lo más viable: explicaciones claras, privacidad por diseño, el panel de cobertura y el contexto local. La mini lección automática y el botón de es legítimo o sospechoso quedan como extras.
+
+Un último consejo. Antes del veinte, visitá las páginas oficiales de cuatro o cinco competidores, leé qué critican sus usuarios, y hablá con dos o tres personas de tecnología de una pyme o un colegio. Con eso, tu presentación tendrá datos reales, y no solo suposiciones.
