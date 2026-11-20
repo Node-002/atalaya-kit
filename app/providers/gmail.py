@@ -177,7 +177,14 @@ class GmailProvider:
         service = self._service()
         if service is None:
             raise RuntimeError("Gmail no esta conectado.")
-        self._modify(ref, [self._label_id(service, label.value)], [])
+        other = Label.review if label is Label.suspicious else Label.suspicious
+        self._modify(
+            ref,
+            [self._label_id(service, label.value)],
+            [
+                self._label_id(service, other.value)
+            ],  # una sola etiqueta de riesgo a la vez
+        )
 
     def quarantine(self, ref: str) -> None:
         """Quitar de la bandeja + etiqueta. Reversible; no borra nada."""
