@@ -9,6 +9,7 @@ import json
 import logging
 import re
 from datetime import UTC, datetime
+from typing import Protocol
 
 from google.auth.exceptions import GoogleAuthError, RefreshError
 from google.auth.transport.requests import Request
@@ -17,11 +18,20 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.models import ConnectionStatus, Label, Message
-from app.tokens import TokenVault
 
 log = logging.getLogger("atalaya.gmail")
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+
+
+class Vault(Protocol):
+    def load(self) -> dict | None: ...
+
+    def save(self, data: dict) -> None: ...
+
+    def delete(self) -> None: ...
+
+
 BODY_LIMIT = 4000
 _LINK_RE = re.compile(r"https?://[^\s<>\"')]+")
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -73,7 +83,7 @@ def parse_message(raw: dict) -> Message:
 
 class GmailProvider:
     def __init__(
-        self, vault: TokenVault, client_secrets: dict, max_messages: int = 5
+        self, vault: Vault, client_secrets: dict, max_messages: int = 5
     ) -> None:
         self.vault = vault
         self._client = client_secrets["web"]
@@ -229,3 +239,9 @@ class GmailProvider:
 def load_client_secrets(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def fetch_email(creds: Credentials) -> str:
+    """Direccion del buzon que acaba de autorizar (para registrarlo)."""
+    service = build("gmail", "v1", credentials=creds, cache_discovery=False)
+    return service.users().getProfile(userId="me").execute()["emailAddress"]

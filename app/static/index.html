@@ -11,7 +11,11 @@
 
   <header class="top">
     <h1>Atalaya <span>vigila tu correo</span></h1>
-    <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
+    <div class="top-actions">
+      <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
+      <button id="btn-invitar" type="button" class="btn btn-primary">Invitar buzón</button>
+      <button id="btn-salir" type="button" class="btn btn-ghost" hidden>Salir</button>
+    </div>
   </header>
 
   <div id="banner" class="demo-banner" role="note">
@@ -22,13 +26,46 @@
   <main>
     <section class="intro" aria-labelledby="titulo-alertas">
       <h2 id="titulo-alertas">Correos que requieren tu atención</h2>
-      <p>Atalaya revisa cada correo nuevo, te explica por qué desconfía y <strong>nunca aísla ni borra nada sin tu aprobación</strong>.</p>
-      <button id="reset" type="button" class="btn btn-ghost">Reiniciar demostración</button>
+      <p>Atalaya revisa los correos nuevos de tu equipo, te explica por qué desconfía y <strong>nunca aísla ni borra nada sin tu aprobación</strong>.</p>
+      <div class="toolbar">
+        <label for="filtro">Ver buzón:</label>
+        <select id="filtro"><option value="">Todos los buzones</option></select>
+        <button id="reset" type="button" class="btn btn-ghost">Reiniciar demostración</button>
+      </div>
     </section>
 
     <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
     <section id="alertas" aria-live="polite" tabindex="-1"></section>
+
+    <section class="buzones" aria-labelledby="titulo-buzones">
+      <h2 id="titulo-buzones">Buzones vigilados</h2>
+      <p class="nota">Cada persona conecta su propio correo desde un enlace que le envías con «Invitar buzón». No ve este panel.</p>
+      <ul id="buzones" class="lista-buzones"></ul>
+    </section>
   </main>
+
+  <dialog id="dlg-invitar" aria-labelledby="dlg-titulo">
+    <form method="dialog" id="form-invitar" class="dlg">
+      <h2 id="dlg-titulo">Invitar un buzón</h2>
+      <p>Escribe el nombre o puesto de la persona. Se creará un enlace de <strong>un solo uso</strong> que vence en 48 horas. Envíaselo por un canal que uses con ella.</p>
+      <label for="inv-label">Nombre o puesto</label>
+      <input id="inv-label" type="text" maxlength="80" placeholder="Ej.: Ana Ruiz - Recursos Humanos" required>
+      <div id="inv-resultado" hidden>
+        <label for="inv-url">Enlace de invitación (se muestra solo ahora)</label>
+        <div class="fila">
+          <input id="inv-url" type="text" readonly>
+          <button id="inv-copiar" type="button" class="btn">Copiar</button>
+        </div>
+      </div>
+      <p id="inv-msg" class="mensaje" role="status" aria-live="polite"></p>
+      <h3>Invitaciones</h3>
+      <ul id="inv-lista" class="lista-buzones"></ul>
+      <div class="fila fin">
+        <button id="inv-crear" type="submit" class="btn btn-primary">Crear enlace</button>
+        <button id="inv-cerrar" type="button" class="btn btn-ghost">Cerrar</button>
+      </div>
+    </form>
+  </dialog>
 
   <footer>
     <p>Privacidad: Atalaya solo guarda el veredicto, las señales y un identificador. No guarda el contenido de tus correos.</p>

@@ -24,6 +24,12 @@ Un agente web que vigila el correo, analiza cada mensaje nuevo, explica el riesg
 6. Como administrador, quiero un registro de quién aprobó qué y cuándo.
 7. Como visitante, quiero probar todo el flujo con una bandeja simulada sin conectar mi correo.
 
+### Historias añadidas el 20 nov (varios buzones; ver ADR 0003)
+8. Como administrador, quiero invitar a una persona con un enlace de un solo uso para que conecte **su** correo con Google sin darme su contraseña.
+9. Como persona invitada, quiero leer qué hará Atalaya, qué verá la administración y cómo retirar el acceso **antes** de aceptar, y no ver el panel ni las alertas.
+10. Como administrador, quiero ver las alertas de todos los buzones juntas (lo urgente arriba), filtrarlas por persona y saber qué buzones perdieron cobertura.
+11. Como administrador, quiero que solo yo entre al panel (contraseña, intentos limitados) y tener un registro de accesos, invitaciones y conexiones.
+
 ## 5. Requisitos funcionales
 | # | Requisito | Prioridad |
 |---|---|---|
@@ -38,7 +44,7 @@ Un agente web que vigila el correo, analiza cada mensaje nuevo, explica el riesg
 | F9 | Modo demo público con bandeja simulada (phishing, legítimo, inyección de prompt) | Obligatorio |
 
 ## 6. Fuera de alcance
-Conector Microsoft completo, correo saliente/DLP, borrar o enviar correos, multiorganización, facturación, verificación de Google para uso público, OCR.
+Conector Microsoft completo, delegación a nivel de dominio de Google Workspace, correo saliente/DLP, borrar o enviar correos, multiorganización, roles múltiples, alertas persistentes, agrupación por campaña, facturación, verificación de Google para uso público, OCR. *(Varios buzones de una misma organización e invitaciones SÍ entran desde el 20 nov; ver ADR 0003.)*
 
 ## 7. Requisitos no funcionales
 - **Seguridad y privacidad:** ver `CLAUDE.md`. No se guardan cuerpos ni adjuntos; tokens cifrados; el despliegue público solo funciona en modo demo.

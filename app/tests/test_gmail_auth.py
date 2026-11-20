@@ -1,5 +1,6 @@
 import base64
 import json
+import secrets
 
 import pytest
 from cryptography.fernet import Fernet
@@ -9,12 +10,15 @@ from app.main import create_app
 from app.providers.gmail import parse_message
 from app.tokens import TokenVault
 
+CSRF = {"X-Requested-With": "atalaya"}
+ADMIN_PASSWORD = "t-" + secrets.token_urlsafe(18)  # generada en cada corrida
+
 
 def _b64(text: str) -> str:
     return base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
 
 
-# --- Tokens cifrados -----------------------------------------------------------
+# --- Tokens cifrados (archivo) -----------------------------------------------------
 def test_vault_roundtrip_and_ciphertext(tmp_path):
     key = Fernet.generate_key().decode()
     vault = TokenVault(tmp_path / "t.enc", key)
@@ -37,7 +41,7 @@ def test_vault_delete(tmp_path):
     assert vault.load() is None
 
 
-# --- Lectura de mensajes de Gmail ---------------------------------------------
+# --- Lectura de mensajes de Gmail ---------------------------------------------------
 def test_parse_message_plain_text():
     raw = {
         "id": "m1",
@@ -76,9 +80,9 @@ def test_parse_message_html_only_is_stripped_and_trimmed():
     assert len(msg.body) <= 4000
 
 
-# --- Login de Google (sin red) -------------------------------------------------
+# --- Modo conectado: administracion + invitaciones (sin red) --------------------
 @pytest.fixture()
-def gmail_client(tmp_path, monkeypatch):
+def gmail_env(tmp_path, monkeypatch):
     secrets = tmp_path / "client.json"
     secrets.write_text(
         json.dumps(
@@ -96,34 +100,138 @@ def gmail_client(tmp_path, monkeypatch):
     monkeypatch.setenv("ATALAYA_MODE", "gmail")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRETS_FILE", str(secrets))
     monkeypatch.setenv("ATALAYA_FERNET_KEY", Fernet.generate_key().decode())
-    monkeypatch.setenv("ATALAYA_TOKEN_PATH", str(tmp_path / "token.enc"))
-    return TestClient(create_app(), follow_redirects=False)
+    monkeypatch.setenv("ATALAYA_DB_PATH", str(tmp_path / "atalaya.db"))
+    monkeypatch.setenv("ATALAYA_ADMIN_PASSWORD", ADMIN_PASSWORD)
+    monkeypatch.setenv("ATALAYA_SESSION_SECRET", "s" * 48)
+    return tmp_path
 
 
-def test_login_redirects_with_state_pkce_and_minimal_scope(gmail_client):
-    resp = gmail_client.get("/auth/google/login")
-    assert resp.status_code in (302, 307)
-    url = resp.headers["location"]
-    assert url.startswith("https://accounts.google.com/")
-    assert "code_challenge=" in url and "code_challenge_method=S256" in url
-    assert "state=" in url
-    assert "gmail.modify" in url
-    assert "HttpOnly" in resp.headers["set-cookie"]
+@pytest.fixture()
+def gmail_client(gmail_env):
+    return TestClient(create_app(), follow_redirects=False, headers=CSRF)
 
 
-def test_callback_rejects_missing_or_wrong_state(gmail_client):
-    assert gmail_client.get("/auth/google/callback?code=x&state=y").status_code == 400
-    gmail_client.get("/auth/google/login")  # fija la cookie
+@pytest.fixture()
+def admin_client(gmail_client):
+    resp = gmail_client.post("/auth/admin/login", json={"password": ADMIN_PASSWORD})
+    assert resp.status_code == 200
+    return gmail_client
+
+
+def test_gmail_mode_refuses_to_start_without_admin_password(gmail_env, monkeypatch):
+    monkeypatch.delenv("ATALAYA_ADMIN_PASSWORD")
+    with pytest.raises(RuntimeError, match="ATALAYA_ADMIN_PASSWORD"):
+        create_app()
+
+
+def test_gmail_mode_refuses_weak_admin_password(gmail_env, monkeypatch):
+    monkeypatch.setenv("ATALAYA_ADMIN_PASSWORD", "corta")
+    with pytest.raises(RuntimeError, match="al menos"):
+        create_app()
+
+
+def test_panel_api_requires_admin_session(gmail_client):
+    assert gmail_client.get("/api/alerts").status_code == 401
+    assert gmail_client.get("/api/coverage").status_code == 401
+    assert gmail_client.post("/api/invites", json={"label": "x"}).status_code == 401
+    # la pagina principal redirige al login
+    assert gmail_client.get("/").status_code in (302, 307)
+
+
+def test_admin_login_wrong_password_and_rate_limit(gmail_client):
+    for _ in range(5):
+        assert (
+            gmail_client.post(
+                "/auth/admin/login", json={"password": "mala-clave"}
+            ).status_code
+            == 401
+        )
     assert (
-        gmail_client.get("/auth/google/callback?code=x&state=otro").status_code == 400
+        gmail_client.post(
+            "/auth/admin/login", json={"password": ADMIN_PASSWORD}
+        ).status_code
+        == 429
     )
 
 
-def test_disconnect_requires_csrf_header(gmail_client):
-    assert gmail_client.post("/auth/disconnect").status_code == 403
+def test_session_cookie_is_httponly_and_lax(gmail_client):
+    resp = gmail_client.post("/auth/admin/login", json={"password": ADMIN_PASSWORD})
+    cookie = resp.headers["set-cookie"].lower()
+    assert "httponly" in cookie and "samesite=lax" in cookie
 
 
-def test_unconnected_gmail_reports_no_coverage(gmail_client):
-    cov = gmail_client.get("/api/coverage").json()
-    assert cov[0]["status"] == "revoked"
-    assert gmail_client.get("/api/alerts").json() == []
+def test_forged_session_cookie_is_rejected(gmail_client):
+    gmail_client.cookies.set("atalaya_session", "falsa.firma.invalida")
+    assert gmail_client.get("/api/alerts").status_code == 401
+
+
+def test_admin_can_list_and_start_empty(admin_client):
+    assert admin_client.get("/api/alerts").json() == []
+    assert admin_client.get("/api/coverage").json() == []
+
+
+def test_invite_link_is_one_use_and_stored_hashed(admin_client, gmail_env):
+    created = admin_client.post("/api/invites", json={"label": "Ana - RR. HH."}).json()
+    token = created["url"].rsplit("/", 1)[-1]
+    assert created["url"].startswith("http://localhost:8000/invite/")
+    # la base guarda solo el hash, nunca el token
+    assert token.encode() not in (gmail_env / "atalaya.db").read_bytes()
+    public = TestClient(
+        admin_client.app, follow_redirects=False
+    )  # sin cookie de sesion
+    info = public.get(f"/api/public/invite/{token}").json()
+    assert info["valid"] is True and info["label"] == "Ana - RR. HH."
+    assert public.get("/api/public/invite/no-existe").json()["valid"] is False
+
+
+def test_invite_login_requires_consent_and_redirects_to_google(admin_client):
+    token = (
+        admin_client.post("/api/invites", json={"label": "Ana"})
+        .json()["url"]
+        .rsplit("/", 1)[-1]
+    )
+    public = TestClient(admin_client.app, follow_redirects=False)
+    assert (
+        public.get(f"/auth/google/login?invite={token}").status_code == 400
+    )  # sin consentimiento
+    resp = public.get(f"/auth/google/login?invite={token}&consent=1")
+    assert resp.status_code in (302, 307)
+    url = resp.headers["location"]
+    assert url.startswith("https://accounts.google.com/")
+    assert "code_challenge=" in url and "state=" in url and "gmail.modify" in url
+    assert "HttpOnly" in resp.headers["set-cookie"]
+
+
+def test_invalid_or_revoked_invite_cannot_start_login(admin_client):
+    public = TestClient(admin_client.app, follow_redirects=False)
+    assert (
+        public.get("/auth/google/login?invite=inventado&consent=1").status_code == 410
+    )
+    created = admin_client.post("/api/invites", json={"label": "Luis"}).json()
+    token = created["url"].rsplit("/", 1)[-1]
+    assert admin_client.post(f"/api/invites/{created['id']}/revoke").status_code == 200
+    assert public.get(f"/auth/google/login?invite={token}&consent=1").status_code == 410
+
+
+def test_login_without_invite_or_admin_session_is_rejected(gmail_client):
+    assert gmail_client.get("/auth/google/login").status_code == 401
+
+
+def test_callback_rejects_missing_or_wrong_state(admin_client):
+    assert admin_client.get("/auth/google/callback?code=x&state=y").status_code == 400
+    admin_client.get("/auth/google/login")  # fija la cookie (administracion)
+    assert (
+        admin_client.get("/auth/google/callback?code=x&state=otro").status_code == 400
+    )
+
+
+def test_write_requests_need_csrf_header(admin_client):
+    admin_client.headers.pop("X-Requested-With")
+    assert admin_client.post("/api/invites", json={"label": "x"}).status_code == 403
+    assert admin_client.delete("/api/mailboxes/mb_x").status_code == 403
+
+
+def test_audit_log_records_invites_and_logins(admin_client):
+    admin_client.post("/api/invites", json={"label": "Marta"})
+    actions = {e["action"] for e in admin_client.get("/api/audit").json()}
+    assert {"admin_login", "invite_created"} <= actions
