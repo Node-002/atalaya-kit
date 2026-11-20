@@ -8,7 +8,7 @@ from app.providers.demo import DemoProvider
 @pytest.fixture()
 def env():
     provider = DemoProvider()
-    client = TestClient(create_app(provider))
+    client = TestClient(create_app(provider), headers={"X-Requested-With": "atalaya"})
     return client, provider
 
 
@@ -108,3 +108,24 @@ def test_alerts_never_expose_body(env):
     client, _ = env
     text = client.get("/api/alerts").text.lower()
     assert "verifique su cuenta" not in text
+
+
+def test_post_without_csrf_header_is_rejected(env):
+    client, _ = env
+    alert = _by_domain(client, "bancogeneral-seguridad.com")
+    resp = client.post(
+        f"/api/alerts/{alert['id']}/approve", headers={"X-Requested-With": ""}
+    )
+    assert resp.status_code == 403
+    assert (
+        _by_domain(client, "bancogeneral-seguridad.com")["status"] == "pending_approval"
+    )
+
+
+def test_panel_served_with_security_headers(env):
+    client, _ = env
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "Demostración con datos simulados" in resp.text
+    assert "default-src 'self'" in resp.headers["content-security-policy"]
+    assert client.get("/static/app.js").status_code == 200
