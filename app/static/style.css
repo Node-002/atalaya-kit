@@ -63,3 +63,29 @@ footer { max-width: 880px; margin: 0 auto; padding: 20px; color: var(--muted); f
 .hora { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
 .resumen-ia { margin: 0 0 10px; padding: 8px 12px; border-left: 3px solid var(--accent); background: #12202f; border-radius: 4px; }
 .resumen-ia .tag { font-size: .75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; }
+
+/* --- Multi-buzon, invitaciones y paginas publicas --- */
+.top-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+select, input[type="text"], input[type="password"] { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #0d1117; color: var(--text); max-width: 100%; }
+input[type="text"], input[type="password"] { width: 100%; }
+.muted { color: var(--muted); font-weight: 400; }
+.nota { color: var(--muted); font-size: .9rem; margin: 0 0 8px; }
+.buzones { margin-top: 36px; }
+.lista-buzones { list-style: none; margin: 0; padding: 0; }
+.buzon { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; background: var(--panel); }
+.buzon .info { flex: 1 1 260px; word-break: break-word; }
+.estrecho { max-width: 640px; }
+.estrecho h3 { margin: 22px 0 6px; font-size: 1rem; }
+.lead { font-size: 1.05rem; }
+.puntos { margin: 0; padding-left: 20px; }
+.puntos li { margin: 4px 0; }
+.aceptar { display: flex; gap: 10px; align-items: flex-start; margin: 24px 0 12px; }
+.aceptar input { margin-top: 4px; width: 18px; height: 18px; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; max-width: 560px; width: calc(100% - 32px); padding: 0; }
+dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.dlg { padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+.dlg h2, .dlg h3 { margin: 6px 0; }
+.fila { display: flex; gap: 8px; align-items: center; }
+.fila.fin { justify-content: flex-end; margin-top: 10px; }
+[hidden] { display: none !important; }

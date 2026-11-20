@@ -60,6 +60,8 @@ class ActionRecord(BaseModel):
 class Alert(BaseModel):
     id: str
     message_ref: str  # hash, no el contenido
+    mailbox_id: str = "default"
+    mailbox_label: str = ""
     received_at: datetime
     sender_domain: str
     risk: Risk
@@ -85,5 +87,7 @@ class Alert(BaseModel):
 
 
 class Coverage(BaseModel):
+    mailbox_id: str = "default"
+    label: str = ""
     account: str
     status: ConnectionStatus

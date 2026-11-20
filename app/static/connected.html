@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Atalaya — conexión</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top"><h1>Atalaya <span>vigila tu correo</span></h1></header>
+  <main class="estrecho">
+    <section id="ok" hidden>
+      <h2>Listo: tu correo quedó conectado</h2>
+      <p>Atalaya ya está vigilando tu bandeja contra phishing. No tienes que hacer nada más ni entrar a ninguna página.</p>
+      <p>Puedes retirar el acceso cuando quieras: en tu cuenta de Google, <strong>Seguridad → Tus conexiones con apps de terceros → Atalaya → Quitar acceso</strong>.</p>
+    </section>
+    <section id="cancelado" hidden>
+      <h2>No se conectó nada</h2>
+      <p>Cancelaste la autorización o no se pudo completar. Tu correo no fue conectado. Si quieres intentarlo de nuevo, usa otra vez el enlace que te enviaron (si todavía es válido).</p>
+    </section>
+  </main>
+  <script src="/static/connected.js"></script>
+</body>
+</html>

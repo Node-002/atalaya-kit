@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Conectar tu correo a Atalaya</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top"><h1>Atalaya <span>vigila tu correo</span></h1></header>
+
+  <div id="banner-demo" class="demo-banner" role="note" hidden>
+    <strong>Demostración.</strong> No se conecta ningún correo real: es una simulación.
+  </div>
+
+  <main class="estrecho">
+    <section id="invalida" hidden>
+      <h2>Este enlace no es válido</h2>
+      <p>El enlace ya se usó, venció o fue cancelado. Pide uno nuevo a quien te lo envió.</p>
+    </section>
+
+    <section id="consentimiento" hidden>
+      <h2>Conectar tu correo a Atalaya</h2>
+      <p id="presentacion" class="lead"></p>
+
+      <h3>Qué hace Atalaya</h3>
+      <ul class="puntos">
+        <li>Revisa los correos <strong>nuevos</strong> de tu bandeja y avisa si alguno parece phishing o fraude.</li>
+        <li>Puede ponerle una etiqueta («Revisar» o «Sospechoso»). Si la persona administradora lo aprueba, puede <strong>sacar un correo sospechoso de la bandeja</strong> y dejarlo bajo esa etiqueta. Siempre se puede deshacer.</li>
+      </ul>
+
+      <h3>Qué verá la persona administradora</h3>
+      <ul class="puntos">
+        <li>De qué dominio vino cada correo sospechoso, a qué hora llegó y <strong>por qué parece sospechoso</strong>.</li>
+        <li>No ve tus contraseñas. No ve el contenido completo de tus correos.</li>
+      </ul>
+
+      <h3>Qué NO hace</h3>
+      <ul class="puntos">
+        <li><strong>No borra ni envía correos.</strong></li>
+        <li><strong>No guarda</strong> el contenido de tus correos ni sus adjuntos.</li>
+        <li><strong>No te pide tu contraseña.</strong> La autorización la das directamente con Google.</li>
+      </ul>
+
+      <h3>Qué te mostrará Google</h3>
+      <p>Google describirá el permiso como «leer, redactar y enviar correos». Es el permiso más pequeño que Google ofrece para poder poner etiquetas; Atalaya solo lo usa para leer los correos nuevos y etiquetarlos o moverlos.</p>
+
+      <h3>Cómo retirar el acceso</h3>
+      <p>Cuando quieras, en tu cuenta de Google: <strong>Seguridad → Tus conexiones con apps de terceros → Atalaya → Quitar acceso</strong>.</p>
+
+      <p class="aceptar">
+        <input id="acepto" type="checkbox">
+        <label for="acepto">He leído esto y acepto conectar mi correo a Atalaya.</label>
+      </p>
+      <button id="conectar" type="button" class="btn btn-primary" disabled>Conectar con Google</button>
+    </section>
+  </main>
+
+  <footer><p>Si no esperabas este enlace, ciérralo: no pasa nada hasta que aceptes.</p></footer>
+  <script src="/static/invite.js"></script>
+</body>
+</html>

@@ -81,6 +81,18 @@ Al entregar ("Submit and publish"), Dojo lista el proyecto **gratis y públicame
 - Verificar en `View Project` que el track siga siendo **AI Operators**, aunque el Marketplace muestre la etiqueta "Tool".
 - Antes de entregar: repositorio sin claves, enlaces probados en ventana privada y aviso de privacidad visible.
 
+## Cambio de alcance (20 nov, tarde): varios buzones e invitaciones
+Decidido por la persona autora. En una empresa, quien usa Atalaya (administración) y quien tiene el correo (cada empleado) son personas distintas; el diseño de un solo buzón no servía para vender a organizaciones. Detalle y límites en `docs/adr/0003-buzones-invitaciones-y-administracion.md`.
+
+**Ahora entra:**
+- Varios buzones por organización, cada uno con su estado de cobertura.
+- Invitación de un solo uso (vence en 48 h, revocable) → página de consentimiento → Google → confirmación. La persona invitada **no ve el panel**.
+- Login de administración (contraseña por variable de entorno, límite de intentos) y auditoría persistente.
+- SQLite para buzones (token cifrado), invitaciones y auditoría.
+- Demo pública con 3 empleados simulados y el flujo de invitación simulado.
+
+**Sigue sin entrar:** delegación a nivel de dominio de Google Workspace, Microsoft 365, varias organizaciones, roles múltiples, alertas persistentes, agrupación por campaña (el mismo phishing en varios buzones aparece como alertas separadas), verificación de Google.
+
 ## Decisión de proveedores de correo (17 nov)
 - **Aclaración:** tener dominio propio no implica un proveedor. Una institución con dominio propio puede usar Google Workspace (Gmail) o Microsoft 365 (Exchange/Outlook). Hotmail/Outlook personal es de Microsoft, no de Google.
 - **Arquitectura:** una interfaz `MailProvider` común (listar correos nuevos, leer cabeceras y metadatos, aplicar etiqueta/categoría, mover a cuarentena, estado de conexión). Gmail y Microsoft son dos implementaciones.

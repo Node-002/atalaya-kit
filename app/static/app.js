@@ -1,5 +1,5 @@
-// Panel de Atalaya. Todo contenido dinamico se inserta con textContent
-// (nunca innerHTML), asi que el texto de un correo no puede ejecutar codigo.
+// Panel de Atalaya (administracion). Todo contenido dinamico se inserta con
+// textContent (nunca innerHTML), asi que el texto de un correo no puede ejecutar codigo.
 "use strict";
 
 const RISK_TEXT = { high: "Riesgo alto", medium: "Riesgo medio", low: "Riesgo bajo" };
@@ -15,10 +15,23 @@ const ACTION_TEXT = {
   reject_quarantine: "Cuarentena rechazada",
   mark_legit: "Marcado como legítimo",
 };
+const INVITE_TEXT = { pending: "Pendiente", used: "Usada", expired: "Vencida", revoked: "Revocada" };
+const GROUPS = [
+  { priority: 0, title: "Requieren tu decisión ahora", urgent: true },
+  { priority: 1, title: "Para revisar" },
+  { priority: 2, title: "Ya atendidos" },
+  { priority: 3, title: "Sin riesgo" },
+];
 
 const alertsEl = document.getElementById("alertas");
 const msgEl = document.getElementById("mensaje");
 const covEl = document.getElementById("coverage");
+const filtroEl = document.getElementById("filtro");
+const buzonesEl = document.getElementById("buzones");
+
+let mode = "demo";
+let authRequired = false;
+let multiple = false;
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -27,26 +40,31 @@ function el(tag, cls, text) {
   return node;
 }
 
-async function api(path, method = "GET") {
-  const res = await fetch(path, { method, headers: { "X-Requested-With": "atalaya" } });
+function button(label, cls, onClick) {
+  const b = el("button", cls, label);
+  b.type = "button";
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+async function api(path, method = "GET", body) {
+  const headers = { "X-Requested-With": "atalaya" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (res.status === 401 && authRequired) {
+    window.location.href = "/login";
+    throw new Error("Inicia sesión.");
+  }
   if (!res.ok) {
-    const detail = (await res.json().catch(() => ({}))).detail || "Algo salió mal.";
-    throw new Error(detail);
+    const detail = (await res.json().catch(() => ({}))).detail;
+    throw new Error(typeof detail === "string" ? detail : "Algo salió mal.");
   }
   return res.json();
 }
-
-function actionLabel(action) {
-  if (action.type.startsWith("label:")) return "Etiqueta «" + action.type.slice(6) + "»";
-  return ACTION_TEXT[action.type] || action.type;
-}
-
-const GROUPS = [
-  { priority: 0, title: "Requieren tu decisión ahora", urgent: true },
-  { priority: 1, title: "Para revisar" },
-  { priority: 2, title: "Ya atendidos" },
-  { priority: 3, title: "Sin riesgo" },
-];
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString("es-PA", {
@@ -54,10 +72,17 @@ function formatDate(iso) {
   });
 }
 
+function actionLabel(action) {
+  if (action.type.startsWith("label:")) return "Etiqueta «" + action.type.slice(6) + "»";
+  return ACTION_TEXT[action.type] || action.type;
+}
+
+// --- Alertas ------------------------------------------------------------------------------
 function renderAlert(alert) {
   const card = el("article", "card " + alert.risk);
   card.appendChild(el("h3", "", "Correo de " + alert.sender_domain));
-  card.appendChild(el("p", "hora", "Recibido: " + formatDate(alert.received_at)));
+  const meta = "Recibido: " + formatDate(alert.received_at) + (multiple && alert.mailbox_label ? " · Buzón: " + alert.mailbox_label : "");
+  card.appendChild(el("p", "hora", meta));
 
   const badges = el("div", "badges");
   badges.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
@@ -86,23 +111,14 @@ function renderAlert(alert) {
     actions.appendChild(button("Dejarlo donde está", "btn", () => act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.")));
   }
   if (alert.risk !== "low" && alert.status !== "dismissed") {
-    actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo: el correo volvió a tu bandeja de entrada.")));
+    actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo: el correo volvió a la bandeja de entrada.")));
   }
   card.appendChild(actions);
 
   if (alert.actions.length) {
-    const audit = el("p", "audit");
-    audit.textContent = "Historial: " + alert.actions.map(actionLabel).join(" → ");
-    card.appendChild(audit);
+    card.appendChild(el("p", "audit", "Historial: " + alert.actions.map(actionLabel).join(" → ")));
   }
   return card;
-}
-
-function button(label, cls, onClick) {
-  const b = el("button", cls, label);
-  b.type = "button";
-  b.addEventListener("click", onClick);
-  return b;
 }
 
 async function act(id, verb, okMessage) {
@@ -115,29 +131,45 @@ async function act(id, verb, okMessage) {
   }
 }
 
-let mode = "demo";
-
+// --- Buzones -------------------------------------------------------------------------------
 function renderCoverage(coverage) {
   covEl.replaceChildren();
+  const bad = coverage.filter((c) => c.status !== "connected").length;
+  if (!coverage.length) {
+    covEl.appendChild(el("span", "bad", "● Sin buzones conectados"));
+  } else if (bad) {
+    covEl.appendChild(el("span", "bad", "● " + bad + (bad === 1 ? " buzón sin cobertura" : " buzones sin cobertura")));
+  } else {
+    covEl.appendChild(el("span", "ok", "● Vigilando " + coverage.length + (coverage.length === 1 ? " buzón" : " buzones")));
+  }
+
+  buzonesEl.replaceChildren();
   coverage.forEach((c) => {
     const ok = c.status === "connected";
-    covEl.appendChild(el("span", ok ? "ok" : "bad", ok ? "● Vigilando" : "● Sin cobertura"));
-    covEl.appendChild(document.createTextNode(" · " + c.account + " "));
-    if (mode === "gmail" && !ok) {
-      const link = el("a", "btn btn-primary", "Conectar con Google");
-      link.href = "/auth/google/login";
-      covEl.appendChild(link);
-    }
-    if (mode === "gmail" && ok) {
-      covEl.appendChild(button("Desconectar", "btn btn-ghost", disconnect));
-    }
+    const li = el("li", "buzon");
+    const info = el("div", "info");
+    info.appendChild(el("strong", "", c.label));
+    info.appendChild(el("span", "muted", " · " + c.account));
+    li.appendChild(info);
+    li.appendChild(el("span", "badge " + (ok ? "low" : "high"), ok ? "Vigilado" : "Sin cobertura"));
+    li.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
+    buzonesEl.appendChild(li);
   });
+  if (!coverage.length) buzonesEl.appendChild(el("li", "muted", "Todavía no hay buzones. Usa «Invitar buzón»."));
+
+  // filtro: conserva la seleccion
+  const selected = filtroEl.value;
+  filtroEl.replaceChildren(new Option("Todos los buzones", ""));
+  coverage.forEach((c) => filtroEl.appendChild(new Option(c.label, c.mailbox_id)));
+  filtroEl.value = coverage.some((c) => c.mailbox_id === selected) ? selected : "";
+  multiple = coverage.length > 1;
 }
 
-async function disconnect() {
+async function disconnect(box) {
+  if (!window.confirm("¿Desconectar " + box.label + "? Atalaya dejará de vigilar ese correo y se revocará su acceso.")) return;
   try {
-    await api("/auth/disconnect", "POST");
-    msgEl.textContent = "Cuenta desconectada y acceso revocado.";
+    await api("/api/mailboxes/" + encodeURIComponent(box.mailbox_id), "DELETE");
+    msgEl.textContent = "Buzón desconectado.";
     await load();
   } catch (err) {
     msgEl.textContent = err.message;
@@ -145,16 +177,17 @@ async function disconnect() {
 }
 
 async function load() {
-  const [alerts, coverage] = await Promise.all([api("/api/alerts"), api("/api/coverage")]);
+  const coverage = await api("/api/coverage");
   renderCoverage(coverage);
+  const query = filtroEl.value ? "?mailbox_id=" + encodeURIComponent(filtroEl.value) : "";
+  const alerts = await api("/api/alerts" + query);
 
   const pendientes = alerts.filter((a) => a.priority <= 1).length;
-  const nodes = [];
-  nodes.push(
+  const nodes = [
     pendientes
       ? el("p", "resumen", pendientes + (pendientes === 1 ? " correo requiere" : " correos requieren") + " tu atención.")
       : el("p", "resumen ok", "Nada pendiente: no hay correos que requieran tu atención."),
-  );
+  ];
   GROUPS.forEach((g) => {
     const items = alerts.filter((a) => a.priority === g.priority);
     if (!items.length) return;
@@ -166,6 +199,76 @@ async function load() {
   if (!alerts.length) alertsEl.appendChild(el("p", "", "No hay correos por revisar."));
 }
 
+// --- Invitaciones --------------------------------------------------------------------------
+const dlg = document.getElementById("dlg-invitar");
+const invLabel = document.getElementById("inv-label");
+const invUrl = document.getElementById("inv-url");
+const invRes = document.getElementById("inv-resultado");
+const invMsg = document.getElementById("inv-msg");
+const invList = document.getElementById("inv-lista");
+
+async function loadInvites() {
+  const invites = await api("/api/invites");
+  invList.replaceChildren();
+  invites.slice(0, 8).forEach((i) => {
+    const li = el("li", "buzon");
+    const info = el("div", "info");
+    info.appendChild(el("strong", "", i.label));
+    info.appendChild(el("span", "muted", " · " + INVITE_TEXT[i.status] + " · vence " + formatDate(i.expires_at)));
+    li.appendChild(info);
+    if (i.status === "pending") {
+      li.appendChild(button("Revocar", "btn btn-ghost", async () => {
+        try { await api("/api/invites/" + encodeURIComponent(i.id) + "/revoke", "POST"); await loadInvites(); }
+        catch (err) { invMsg.textContent = err.message; }
+      }));
+    }
+    invList.appendChild(li);
+  });
+  if (!invites.length) invList.appendChild(el("li", "muted", "Aún no hay invitaciones."));
+}
+
+document.getElementById("btn-invitar").addEventListener("click", async () => {
+  invRes.hidden = true;
+  invMsg.textContent = "";
+  invLabel.value = "";
+  dlg.showModal();
+  invLabel.focus();
+  loadInvites().catch((err) => { invMsg.textContent = err.message; });
+});
+
+document.getElementById("form-invitar").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const created = await api("/api/invites", "POST", { label: invLabel.value });
+    invUrl.value = created.url;
+    invRes.hidden = false;
+    invMsg.textContent = "Enlace creado. Cópialo y envíaselo a la persona: solo funciona una vez.";
+    invUrl.select();
+    await loadInvites();
+  } catch (err) {
+    invMsg.textContent = err.message;
+  }
+});
+
+document.getElementById("inv-copiar").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(invUrl.value);
+    invMsg.textContent = "Enlace copiado.";
+  } catch {
+    invUrl.select();
+    invMsg.textContent = "Selecciona el enlace y cópialo con Ctrl + C.";
+  }
+});
+
+document.getElementById("inv-cerrar").addEventListener("click", async () => {
+  invUrl.value = "";
+  dlg.close();
+  await load().catch(() => {});
+});
+
+// --- Arranque ------------------------------------------------------------------------------
+filtroEl.addEventListener("change", () => load().catch((err) => { msgEl.textContent = err.message; }));
+
 document.getElementById("reset").addEventListener("click", async () => {
   try {
     await api("/api/demo/reset", "POST");
@@ -176,16 +279,22 @@ document.getElementById("reset").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("btn-salir").addEventListener("click", async () => {
+  await fetch("/auth/admin/logout", { method: "POST", headers: { "X-Requested-With": "atalaya" } });
+  window.location.href = "/login";
+});
+
 async function init() {
-  mode = (await api("/health")).mode;
-  const reset = document.getElementById("reset");
+  const health = await (await fetch("/health")).json();
+  mode = health.mode;
+  authRequired = health.auth;
   if (mode === "gmail") {
-    reset.hidden = true;
+    document.getElementById("reset").hidden = true;
     document.getElementById("banner").textContent =
       "Modo conectado: solo para uso local con cuentas de prueba.";
     setInterval(() => load().catch(() => {}), 30000);
-    await api("/api/poll", "POST").catch(() => {});
   }
+  if (authRequired) document.getElementById("btn-salir").hidden = false;
   await load();
 }
 

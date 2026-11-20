@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Atalaya — acceso de administración</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top"><h1>Atalaya <span>vigila tu correo</span></h1></header>
+  <main class="estrecho">
+    <h2>Acceso de administración</h2>
+    <form id="form" class="dlg">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+      <p id="msg" class="mensaje" role="alert"></p>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+    <p class="nota">Solo la persona que administra Atalaya entra aquí. Si recibiste un enlace de invitación, ábrelo directamente: no necesitas esta página.</p>
+  </main>
+  <script src="/static/login.js"></script>
+</body>
+</html>
