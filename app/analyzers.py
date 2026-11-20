@@ -107,7 +107,7 @@ def _links(msg: Message) -> list[Signal]:
                 Signal(
                     code="shortened_link",
                     description="Contiene un enlace acortado que oculta el destino real.",
-                    weight=15,
+                    weight=20,
                 )
             ]
     return []
@@ -120,7 +120,7 @@ def _urgency(msg: Message) -> list[Signal]:
             Signal(
                 code="urgency",
                 description="Usa lenguaje de urgencia o amenaza para presionar.",
-                weight=10,
+                weight=15,
             )
         ]
     return []
@@ -133,7 +133,7 @@ def _injection(msg: Message) -> list[Signal]:
             Signal(
                 code="prompt_injection",
                 description="Contiene instrucciones dirigidas a un sistema de IA (intento de manipulacion).",
-                weight=30,
+                weight=60,
             )
         ]
     return []
