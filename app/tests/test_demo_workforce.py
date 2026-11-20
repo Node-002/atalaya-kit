@@ -122,3 +122,55 @@ def test_invite_pages_are_served_without_login(client):
     assert client.get("/invite/cualquier-token").status_code == 200
     assert client.get("/connected").status_code == 200
     assert client.get("/login").status_code == 200
+
+
+# --- Cuarentena manual en cualquier correo (decision humana, reversible) -----------------------
+def _alert_with(client, **conditions):
+    alerts = client.get("/api/alerts").json()
+    return next(a for a in alerts if all(a[k] == v for k, v in conditions.items()))
+
+
+def test_admin_can_quarantine_a_low_risk_email_the_system_missed(client):
+    low = _alert_with(client, risk="low")
+    assert low["status"] == "dismissed" and low["priority"] == 3
+    done = client.post(f"/api/alerts/{low['id']}/approve").json()
+    assert done["status"] == "quarantined" and done["priority"] == 2
+    assert any(a["type"] == "quarantine" for a in done["actions"])
+
+
+def test_quarantined_email_can_be_restored_even_if_it_was_low_risk(client):
+    low = _alert_with(client, risk="low")
+    client.post(f"/api/alerts/{low['id']}/approve")
+    restored = client.post(f"/api/alerts/{low['id']}/legit").json()
+    assert restored["status"] == "dismissed"
+
+
+def test_can_quarantine_after_deciding_to_keep_it(client):
+    high = _alert_with(client, status="pending_approval")
+    assert client.post(f"/api/alerts/{high['id']}/reject").json()["status"] == "labeled"
+    assert (
+        client.post(f"/api/alerts/{high['id']}/approve").json()["status"]
+        == "quarantined"
+    )
+
+
+def test_already_quarantined_email_cannot_be_quarantined_again(client):
+    low = _alert_with(client, risk="low")
+    client.post(f"/api/alerts/{low['id']}/approve")
+    again = client.post(f"/api/alerts/{low['id']}/approve")
+    assert again.status_code == 409 and "cuarentena" in again.json()["detail"]
+
+
+def test_alert_decisions_appear_in_the_activity_history(client):
+    low = _alert_with(client, risk="low")
+    client.post(f"/api/alerts/{low['id']}/approve")
+    client.post(f"/api/alerts/{low['id']}/legit")
+    audit = client.get("/api/audit").json()
+    actions = [e["action"] for e in audit]
+    assert "alert_quarantine" in actions and "alert_legit" in actions
+    entry = next(e for e in audit if e["action"] == "alert_quarantine")
+    assert (
+        low["sender_domain"] in entry["detail"]
+        and low["mailbox_label"] in entry["detail"]
+    )
+    assert "admin-demo" == entry["actor"]

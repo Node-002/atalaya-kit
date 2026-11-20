@@ -236,10 +236,16 @@ def create_app(
     def get_alert(alert_id: str) -> Alert:
         return _alert_or_404(alert_id)
 
-    def _act(fn, alert_id: str, request: Request) -> Alert:
+    def _act(fn, alert_id: str, request: Request, audit_action: str) -> Alert:
         _alert_or_404(alert_id)
         try:
-            return fn(alert_id, actor_of(request))
+            alert = fn(alert_id, actor_of(request))
+            registry.audit(
+                actor_of(request),
+                audit_action,
+                f"{alert.sender_domain} - {alert.mailbox_label or 'buzon'}",
+            )
+            return alert
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:  # fallo del proveedor (token revocado, red, API)
@@ -250,15 +256,15 @@ def create_app(
 
     @app.post("/api/alerts/{alert_id}/approve", response_model=Alert)
     def approve(alert_id: str, request: Request) -> Alert:
-        return _act(store.approve, alert_id, request)
+        return _act(store.approve, alert_id, request, "alert_quarantine")
 
     @app.post("/api/alerts/{alert_id}/reject", response_model=Alert)
     def reject(alert_id: str, request: Request) -> Alert:
-        return _act(store.reject, alert_id, request)
+        return _act(store.reject, alert_id, request, "alert_kept")
 
     @app.post("/api/alerts/{alert_id}/legit", response_model=Alert)
     def legit(alert_id: str, request: Request) -> Alert:
-        return _act(store.mark_legit, alert_id, request)
+        return _act(store.mark_legit, alert_id, request, "alert_legit")
 
     @app.post("/api/poll")
     def poll() -> dict[str, int]:

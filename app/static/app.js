@@ -106,11 +106,14 @@ function renderAlert(alert) {
   }
 
   const actions = el("div", "actions");
+  const quarantineMsg = "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.";
+  if (alert.status !== "quarantined") {
+    actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () => act(alert.id, "approve", quarantineMsg)));
+  }
   if (alert.status === "pending_approval") {
-    actions.appendChild(button("Poner en cuarentena", "btn btn-danger", () => act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.")));
     actions.appendChild(button("Dejarlo donde está", "btn", () => act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.")));
   }
-  if (alert.risk !== "low" && alert.status !== "dismissed") {
+  if (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed")) {
     actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo: el correo volvió a la bandeja de entrada.")));
   }
   card.appendChild(actions);
@@ -196,7 +199,45 @@ async function loadSecurity() {
   document.getElementById("seguridad").hidden = !events.length;
 }
 
+const ACTIVITY_TEXT = {
+  admin_login: "Inició sesión",
+  admin_login_failed: "Intento de acceso fallido",
+  admin_login_denied: "Una cuenta no autorizada intentó entrar",
+  admin_login_blocked: "Acceso bloqueado por demasiados intentos",
+  invite_created: "Creó una invitación",
+  invite_revoked: "Revocó una invitación",
+  mailbox_connected: "Se conectó un buzón",
+  mailbox_reconnected: "Se reconectó un buzón",
+  mailbox_disconnected: "Se desconectó un buzón",
+  mailbox_rejected_identity: "Se rechazó una cuenta con caracteres sospechosos",
+  alert_quarantine: "Puso un correo en cuarentena",
+  alert_kept: "Decidió no aislar un correo",
+  alert_legit: "Marcó un correo como legítimo",
+};
+
+function actorLabel(actor) {
+  if (actor === "sistema") return "Atalaya";
+  if (actor === "desconocido") return "Persona sin identificar";
+  if (actor === "admin-demo") return "Administración (demo)";
+  return actor;
+}
+
+async function loadHistory() {
+  const events = await api("/api/audit");
+  const list = document.getElementById("historial");
+  list.replaceChildren();
+  events.slice(0, 25).forEach((e) => {
+    const li = el("li", "evento");
+    li.appendChild(el("span", "muted hora-ev", formatDate(e.at)));
+    li.appendChild(el("strong", "", " " + (ACTIVITY_TEXT[e.action] || e.action)));
+    li.appendChild(el("span", "muted", " · " + actorLabel(e.actor) + (e.detail ? " · " + e.detail : "")));
+    list.appendChild(li);
+  });
+  if (!events.length) list.appendChild(el("li", "muted", "Todavía no hay actividad."));
+}
+
 async function load() {
+  loadHistory().catch(() => {});
   if (authRequired) loadSecurity().catch(() => {});
   const coverage = await api("/api/coverage");
   renderCoverage(coverage);
