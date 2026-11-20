@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 import requests
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 from app.admin import AdminAuth, set_session_cookie
 from app.identity import is_safe_email, normalize_email
@@ -35,6 +37,9 @@ REDIRECT_URI = os.environ.get(
 )
 STATE_COOKIE = "atalaya_oauth_state"
 STATE_TTL = 600  # segundos
+# Diferencia de reloj tolerada al verificar el token de identidad. Con 0 (el valor por defecto
+# de la libreria) basta que el reloj local vaya 1 s atrasado para rechazar un token valido.
+CLOCK_SKEW_SECONDS = 30
 ADMIN_SCOPES = ["openid", "https://www.googleapis.com/auth/userinfo.email"]
 INVALID_INVITE = (
     "Este enlace no es valido o ya vencio. Pide uno nuevo a quien te lo envio."
@@ -70,11 +75,19 @@ def revoke_google_token(token: str | None) -> None:
         log.warning("No se pudo revocar el token en Google; se borra solo el local.")
 
 
+def _verify_identity_token(token: str, audience: str) -> dict:
+    """Verifica firma, emisor, destinatario y vencimiento del token de identidad de Google."""
+    return google_id_token.verify_oauth2_token(
+        token,
+        google_requests.Request(),
+        audience,
+        clock_skew_in_seconds=CLOCK_SKEW_SECONDS,
+    )
+
+
 def _google_admin_claims(ctx: AuthContext, code: str, verifier: str) -> dict:
-    """Intercambia el codigo y VERIFICA el token de identidad (firma, emisor, audiencia,
-    vencimiento). Funcion de modulo para poder sustituirla en pruebas sin red."""
-    from google.auth.transport import requests as google_requests
-    from google.oauth2 import id_token
+    """Intercambia el codigo y VERIFICA el token de identidad. Funcion de modulo para poder
+    sustituirla en pruebas sin red."""
     from google_auth_oauthlib.flow import Flow
 
     flow = Flow.from_client_secrets_file(
@@ -82,10 +95,8 @@ def _google_admin_claims(ctx: AuthContext, code: str, verifier: str) -> dict:
     )
     flow.code_verifier = verifier
     flow.fetch_token(code=code)
-    return id_token.verify_oauth2_token(
-        flow.credentials.id_token,
-        google_requests.Request(),
-        ctx.client_secrets["web"]["client_id"],
+    return _verify_identity_token(
+        flow.credentials.id_token, ctx.client_secrets["web"]["client_id"]
     )
 
 
@@ -184,8 +195,9 @@ def build_router(ctx: AuthContext) -> APIRouter:
                 claims = _google_admin_claims(ctx, code, entry["verifier"])
             except Exception as exc:  # noqa: BLE001  cualquier fallo del intercambio es un fallo de acceso
                 log.warning(
-                    "Fallo el acceso de administracion con Google: %s",
+                    "Fallo el acceso de administracion con Google: %s (%s)",
                     type(exc).__name__,
+                    str(exc)[:160],
                 )
                 admin.record_failure(client)
                 time.sleep(admin.failure_delay)
