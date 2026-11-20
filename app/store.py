@@ -7,6 +7,7 @@ import hashlib
 import logging
 import threading
 from datetime import UTC, datetime
+from typing import Protocol
 
 from app import analyzers, decision
 from app.llm import Explainer, LLMVerdict, semantic_signals
@@ -26,13 +27,27 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+class AlertRepo(Protocol):
+    """Donde se guardan las alertas entre reinicios (cifradas)."""
+
+    def save_alert(
+        self, alert_id: str, mailbox_id: str, ref: str, data: dict
+    ) -> None: ...
+
+    def load_alerts(self) -> list[tuple[str, str, str, dict]]: ...
+
+    def delete_alerts(self, mailbox_id: str | None = None) -> None: ...
+
+
 class AlertStore:
     def __init__(
         self,
         provider: MailProvider | None = None,
         explainer: Explainer | None = None,
         llm_policy: str = "flagged",
+        repo: AlertRepo | None = None,
     ) -> None:
+        self._repo = repo
         self.explainer = explainer
         # "flagged": solo riesgo medio/alto (barato). "all": todos (detecta mas, cuesta mas).
         self.llm_policy = llm_policy
@@ -64,6 +79,8 @@ class AlertStore:
                 self._refs.pop(alert_id, None)
             for key in [k for k in self._verdicts if k[0] == mailbox_id]:
                 self._verdicts.pop(key, None)
+            if self._repo:
+                self._repo.delete_alerts(mailbox_id)
 
     def providers(self) -> list[tuple[str, str, MailProvider]]:
         with self._lock:
@@ -79,6 +96,31 @@ class AlertStore:
             self._alerts.clear()
             self._refs.clear()
             self._verdicts.clear()
+            if self._repo:
+                self._repo.delete_alerts()
+
+    # --- Persistencia ------------------------------------------------------------------
+    def _persist(self, alert_id: str) -> None:
+        if self._repo is None:
+            return
+        mailbox_id, ref = self._refs[alert_id]
+        data = self._alerts[alert_id].model_dump(mode="json")
+        self._repo.save_alert(alert_id, mailbox_id, ref, data)
+
+    def load_persisted(self) -> int:
+        """Recupera las alertas guardadas (solo de buzones que siguen conectados).
+        Asi un correo en cuarentena se puede devolver a la bandeja aunque se reinicie el servidor."""
+        if self._repo is None:
+            return 0
+        loaded = 0
+        with self._lock:
+            for alert_id, mailbox_id, ref, data in self._repo.load_alerts():
+                if mailbox_id not in self._providers:
+                    continue
+                self._alerts[alert_id] = Alert.model_validate(data)
+                self._refs[alert_id] = (mailbox_id, ref)
+                loaded += 1
+        return loaded
 
     # --- Consulta ----------------------------------------------------------------------
     def _ai_verdict(
@@ -106,6 +148,11 @@ class AlertStore:
         self, mailbox_id: str, label_text: str, provider: MailProvider
     ) -> None:
         for msg in provider.list_new_messages():
+            alert_id = _alert_id(mailbox_id, msg.ref)
+            if (
+                alert_id in self._alerts
+            ):  # ya analizado (p. ej. antes de un reinicio): no se repite
+                continue
             signals = analyzers.analyze(msg)
             risk = decision.risk_of(signals)
             verdict = self._ai_verdict(mailbox_id, msg, signals, risk)
@@ -113,7 +160,6 @@ class AlertStore:
             signals = signals + semantic_signals(verdict)
             risk = decision.risk_of(signals)
             label, status = decision.plan_for(risk)
-            alert_id = _alert_id(mailbox_id, msg.ref)
             actions: list[ActionRecord] = []
             if label is not None:
                 provider.apply_label(msg.ref, label)
@@ -137,6 +183,7 @@ class AlertStore:
                 actions=actions,
             )
             self._refs[alert_id] = (mailbox_id, msg.ref)
+            self._persist(alert_id)
 
     # --- Lectura -------------------------------------------------------------------------
     def list(self, mailbox_id: str | None = None) -> list[Alert]:
@@ -165,6 +212,7 @@ class AlertStore:
             provider.quarantine(ref)
             alert.status = Status.quarantined
             self._record(alert, "quarantine", by)
+            self._persist(alert_id)
             return alert
 
     def reject(self, alert_id: str, by: str) -> Alert:
@@ -172,6 +220,7 @@ class AlertStore:
             alert = self._require_pending(alert_id)
             alert.status = Status.labeled  # se conserva la etiqueta, no se aisla
             self._record(alert, "reject_quarantine", by)
+            self._persist(alert_id)
             return alert
 
     def mark_legit(self, alert_id: str, by: str) -> Alert:
@@ -181,6 +230,7 @@ class AlertStore:
             provider.release(ref)
             alert.status = Status.dismissed
             self._record(alert, "mark_legit", by)
+            self._persist(alert_id)
             return alert
 
     def _require_quarantinable(self, alert_id: str) -> Alert:

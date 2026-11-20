@@ -42,6 +42,13 @@ CREATE TABLE IF NOT EXISTS security_events (
     kind    TEXT NOT NULL,
     detail  TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS alerts (
+    id          TEXT PRIMARY KEY,
+    mailbox_id  TEXT NOT NULL,
+    ref         TEXT NOT NULL,
+    data        BLOB NOT NULL,
+    updated_at  TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS audit (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
     at      TEXT NOT NULL,

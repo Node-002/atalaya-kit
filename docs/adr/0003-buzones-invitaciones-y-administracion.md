@@ -22,7 +22,7 @@ En una empresa, **quien usa Atalaya y quien tiene el correo son personas distint
 - **Cuentas de empresa (Google Workspace):** el administrador de TI puede bloquear apps de terceros y la persona vería "acceso bloqueado". En ese caso hace falta que TI autorice la app. Para empresas medianas, el camino real es la **delegación a nivel de dominio** (un solo consentimiento del superadministrador cubre todos los buzones): **no está construida**, queda como siguiente paso.
 - **Microsoft 365:** no implementado.
 - **Una sola organización** por instalación y **una sola persona administradora** (sin roles ni usuarios múltiples).
-- **Alertas en memoria:** se pierden al reiniciar y se recalculan desde la bandeja.
+- **Alertas persistentes desde el 20 nov (tarde):** en modo conectado se guardan **cifradas** (Fernet) en SQLite, sin cuerpos ni adjuntos, para que un correo puesto en cuarentena —que sale de la bandeja y Atalaya ya no vuelve a leer— se pueda devolver aunque se reinicie el servidor. Al desconectar un buzón se borran sus alertas. Los mensajes de Gmail se identifican por su ID (no es contenido). El texto del resumen puede contener fragmentos generados por la IA a partir del correo, ya enmascarados y recortados.
 - **Sin agrupación por campaña:** el mismo phishing en varios buzones aparece como alertas separadas.
 - **La sesión de administración es por contraseña única**, sin segundo factor.
 

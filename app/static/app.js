@@ -17,10 +17,11 @@ const ACTION_TEXT = {
 };
 const INVITE_TEXT = { pending: "Pendiente", used: "Usada", expired: "Vencida", revoked: "Revocada" };
 const GROUPS = [
-  { priority: 0, title: "Requieren tu decisión ahora", urgent: true },
-  { priority: 1, title: "Para revisar" },
-  { priority: 2, title: "Ya atendidos" },
-  { priority: 3, title: "Sin riesgo" },
+  { match: (a) => a.priority === 0, title: "Requieren tu decisión ahora", urgent: true },
+  { match: (a) => a.priority === 1, title: "Para revisar" },
+  { match: (a) => a.status === "quarantined", title: "En cuarentena (fuera de la bandeja)" },
+  { match: (a) => a.priority === 2 && a.status !== "quarantined", title: "Ya atendidos" },
+  { match: (a) => a.priority === 3, title: "Sin riesgo" },
 ];
 
 const alertsEl = document.getElementById("alertas");
@@ -105,6 +106,9 @@ function renderAlert(alert) {
     card.appendChild(ul);
   }
 
+  if (alert.status === "quarantined") {
+    card.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja."));
+  }
   const actions = el("div", "actions");
   const quarantineMsg = "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.";
   if (alert.status !== "quarantined") {
@@ -114,7 +118,8 @@ function renderAlert(alert) {
     actions.appendChild(button("Dejarlo donde está", "btn", () => act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.")));
   }
   if (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed")) {
-    actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo: el correo volvió a la bandeja de entrada.")));
+    const restoring = alert.status === "quarantined";
+    actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-primary", () => act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.")));
   }
   card.appendChild(actions);
 
@@ -251,7 +256,7 @@ async function load() {
       : el("p", "resumen ok", "Nada pendiente: no hay correos que requieran tu atención."),
   ];
   GROUPS.forEach((g) => {
-    const items = alerts.filter((a) => a.priority === g.priority);
+    const items = alerts.filter((a) => g.match(a));
     if (!items.length) return;
     const h = el("h3", "grupo" + (g.urgent ? " urgente" : ""), g.title + " ");
     h.appendChild(el("span", "n", "(" + items.length + ")"));

@@ -7,6 +7,7 @@ borra ni envia correos: esas operaciones no existen en esta clase.
 import base64
 import json
 import logging
+import os
 import re
 from datetime import UTC, datetime
 from typing import Protocol
@@ -33,6 +34,7 @@ class Vault(Protocol):
 
 
 BODY_LIMIT = 4000
+RECENT_DAYS = 7  # al conectar solo se revisan los correos de la ultima semana
 _LINK_RE = re.compile(r"https?://[^\s<>\"')]+")
 _TAG_RE = re.compile(r"<[^>]+>")
 
@@ -83,7 +85,10 @@ def parse_message(raw: dict) -> Message:
 
 class GmailProvider:
     def __init__(
-        self, vault: Vault, client_secrets: dict, max_messages: int = 5
+        self,
+        vault: Vault,
+        client_secrets: dict,
+        max_messages: int = int(os.environ.get("ATALAYA_MAX_MESSAGES", "25")),
     ) -> None:
         self.vault = vault
         self._client = client_secrets["web"]
@@ -132,7 +137,12 @@ class GmailProvider:
             listing = (
                 service.users()
                 .messages()
-                .list(userId="me", labelIds=["INBOX"], maxResults=self.max_messages)
+                .list(
+                    userId="me",
+                    labelIds=["INBOX"],
+                    maxResults=self.max_messages,
+                    q=f"newer_than:{RECENT_DAYS}d",
+                )
                 .execute()
             )
             found: list[Message] = []
