@@ -91,7 +91,7 @@ Decidido por la persona autora. En una empresa, quien usa Atalaya (administraci�
 - SQLite para buzones (token cifrado), invitaciones y auditoría.
 - Demo pública con 3 empleados simulados y el flujo de invitación simulado.
 
-**Sigue sin entrar:** delegación a nivel de dominio de Google Workspace, Microsoft 365, varias organizaciones, roles múltiples, alertas persistentes, agrupación por campaña (el mismo phishing en varios buzones aparece como alertas separadas), verificación de Google.
+**Sigue sin entrar:** delegación a nivel de dominio de Google Workspace, Microsoft 365, varias organizaciones, roles múltiples, agrupación por campaña (el mismo phishing en varios buzones aparece como alertas separadas), verificación de Google.
 
 ## Decisión de proveedores de correo (17 nov)
 - **Aclaración:** tener dominio propio no implica un proveedor. Una institución con dominio propio puede usar Google Workspace (Gmail) o Microsoft 365 (Exchange/Outlook). Hotmail/Outlook personal es de Microsoft, no de Google.

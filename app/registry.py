@@ -248,3 +248,27 @@ class Registry:
         self.db.execute(
             "UPDATE mailboxes SET token_enc = NULL WHERE id = ?", (mailbox_id,)
         )
+
+    # --- Alertas (cifradas en reposo; sin cuerpos ni adjuntos) ---------------------------
+    def save_alert(self, alert_id: str, mailbox_id: str, ref: str, data: dict) -> None:
+        self.db.execute(
+            "INSERT INTO alerts (id, mailbox_id, ref, data, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at",
+            (alert_id, mailbox_id, ref, self._encrypt(data), _now().isoformat()),
+        )
+
+    def load_alerts(self) -> list[tuple[str, str, str, dict]]:
+        out = []
+        for row in self.db.query("SELECT id, mailbox_id, ref, data FROM alerts"):
+            try:
+                data = json.loads(self._fernet.decrypt(row["data"]))
+            except (InvalidToken, ValueError):
+                continue  # clave distinta o dato danado: se ignora, no se rompe el arranque
+            out.append((row["id"], row["mailbox_id"], row["ref"], data))
+        return out
+
+    def delete_alerts(self, mailbox_id: str | None = None) -> None:
+        if mailbox_id is None:
+            self.db.execute("DELETE FROM alerts")
+        else:
+            self.db.execute("DELETE FROM alerts WHERE mailbox_id = ?", (mailbox_id,))

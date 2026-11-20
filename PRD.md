@@ -44,7 +44,7 @@ Un agente web que vigila el correo, analiza cada mensaje nuevo, explica el riesg
 | F9 | Modo demo público con bandeja simulada (phishing, legítimo, inyección de prompt) | Obligatorio |
 
 ## 6. Fuera de alcance
-Conector Microsoft completo, delegación a nivel de dominio de Google Workspace, correo saliente/DLP, borrar o enviar correos, multiorganización, roles múltiples, alertas persistentes, agrupación por campaña, facturación, verificación de Google para uso público, OCR. *(Varios buzones de una misma organización e invitaciones SÍ entran desde el 20 nov; ver ADR 0003.)*
+Conector Microsoft completo, delegación a nivel de dominio de Google Workspace, correo saliente/DLP, borrar o enviar correos, multiorganización, roles múltiples, agrupación por campaña, facturación, verificación de Google para uso público, OCR. *(Varios buzones de una misma organización e invitaciones SÍ entran desde el 20 nov; ver ADR 0003.)*
 
 ## 7. Requisitos no funcionales
 - **Seguridad y privacidad:** ver `CLAUDE.md`. No se guardan cuerpos ni adjuntos; tokens cifrados; el despliegue público solo funciona en modo demo.

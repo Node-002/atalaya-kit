@@ -120,7 +120,10 @@ def create_app(
         # demo publica: resumen simulado (no gasta saldo). Conectado: IA solo si se activa.
         explainer = explainer_from_env("simulated" if demo_like else "off")
     store = AlertStore(
-        provider, explainer, os.environ.get("ATALAYA_LLM_POLICY", "flagged")
+        provider,
+        explainer,
+        os.environ.get("ATALAYA_LLM_POLICY", "flagged"),
+        repo=registry if (mode == "gmail" and not legacy) else None,
     )
 
     seed_ids: set[str] = set()
@@ -140,6 +143,7 @@ def create_app(
 
         for row in registry.list_mailboxes("gmail"):
             store.add_provider(row["id"], row["label"], make_provider(row["id"]))
+    store.load_persisted()
     store.poll()
 
     @asynccontextmanager
