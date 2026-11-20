@@ -61,8 +61,10 @@ class AlertStore:
             self._refs[alert_id] = msg.ref
 
     def list(self) -> list[Alert]:
+        """Lo que requiere accion primero; dentro de cada grupo, lo mas reciente arriba."""
         return sorted(
-            self._alerts.values(), key=lambda a: (a.risk.value != "high", a.id)
+            self._alerts.values(),
+            key=lambda a: (a.priority, -a.received_at.timestamp()),
         )
 
     def get(self, alert_id: str) -> Alert | None:

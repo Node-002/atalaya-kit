@@ -54,3 +54,10 @@ main { max-width: 880px; margin: 0 auto; padding: 20px; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
 
 footer { max-width: 880px; margin: 0 auto; padding: 20px; color: var(--muted); font-size: .85rem; }
+
+.grupo { margin: 28px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-size: 1.05rem; }
+.grupo.urgente { color: var(--high); border-bottom-color: var(--high); }
+.grupo .n { color: var(--muted); font-weight: 400; font-size: .9rem; }
+.resumen { margin: 8px 0 0; padding: 10px 14px; border-radius: 8px; background: #3a1d1d; border: 1px solid #6e3030; }
+.resumen.ok { background: #14301c; border-color: #2ea043; }
+.hora { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }

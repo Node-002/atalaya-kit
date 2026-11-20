@@ -41,9 +41,23 @@ function actionLabel(action) {
   return ACTION_TEXT[action.type] || action.type;
 }
 
+const GROUPS = [
+  { priority: 0, title: "Requieren tu decisión ahora", urgent: true },
+  { priority: 1, title: "Para revisar" },
+  { priority: 2, title: "Ya atendidos" },
+  { priority: 3, title: "Sin riesgo" },
+];
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleString("es-PA", {
+    day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function renderAlert(alert) {
   const card = el("article", "card " + alert.risk);
   card.appendChild(el("h3", "", "Correo de " + alert.sender_domain));
+  card.appendChild(el("p", "hora", "Recibido: " + formatDate(alert.received_at)));
 
   const badges = el("div", "badges");
   badges.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
@@ -125,7 +139,21 @@ async function load() {
   const [alerts, coverage] = await Promise.all([api("/api/alerts"), api("/api/coverage")]);
   renderCoverage(coverage);
 
-  alertsEl.replaceChildren(...alerts.map(renderAlert));
+  const pendientes = alerts.filter((a) => a.priority <= 1).length;
+  const nodes = [];
+  nodes.push(
+    pendientes
+      ? el("p", "resumen", pendientes + (pendientes === 1 ? " correo requiere" : " correos requieren") + " tu atención.")
+      : el("p", "resumen ok", "Nada pendiente: no hay correos que requieran tu atención."),
+  );
+  GROUPS.forEach((g) => {
+    const items = alerts.filter((a) => a.priority === g.priority);
+    if (!items.length) return;
+    const h = el("h3", "grupo" + (g.urgent ? " urgente" : ""), g.title + " ");
+    h.appendChild(el("span", "n", "(" + items.length + ")"));
+    nodes.push(h, ...items.map(renderAlert));
+  });
+  alertsEl.replaceChildren(...nodes);
   if (!alerts.length) alertsEl.appendChild(el("p", "", "No hay correos por revisar."));
 }
 
