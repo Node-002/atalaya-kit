@@ -62,6 +62,31 @@ class Registry:
         )
         return [dict(r) for r in rows]
 
+    def count_audit(self, actions: tuple[str, ...], since: datetime) -> int:
+        total = 0
+        for action in actions:
+            rows = self.db.query(
+                "SELECT COUNT(*) AS n FROM audit WHERE action = ? AND at >= ?",
+                (action, since.isoformat()),
+            )
+            total += int(rows[0]["n"])
+        return total
+
+    # --- Eventos de seguridad (los que se avisan a otras personas) -----------------------
+    def log_security_event(self, kind: str, detail: str = "") -> None:
+        self.db.execute(
+            "INSERT INTO security_events (at, kind, detail) VALUES (?, ?, ?)",
+            (_now().isoformat(), kind, detail[:300]),
+        )
+
+    def list_security_events(self, hours: int = 24, limit: int = 20) -> list[dict]:
+        since = (_now() - timedelta(hours=hours)).isoformat()
+        rows = self.db.query(
+            "SELECT at, kind, detail FROM security_events WHERE at >= ? ORDER BY id DESC LIMIT ?",
+            (since, limit),
+        )
+        return [dict(r) for r in rows]
+
     # --- Invitaciones --------------------------------------------------------------
     def create_invite(
         self, label: str, actor: str, ttl: timedelta = INVITE_TTL

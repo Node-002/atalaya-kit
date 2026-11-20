@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS invites (
     revoked_at  TEXT,
     mailbox_id  TEXT
 );
+CREATE TABLE IF NOT EXISTS login_limits (
+    client        TEXT PRIMARY KEY,
+    failures      INTEGER NOT NULL DEFAULT 0,
+    window_start  TEXT,
+    locked_until  TEXT,
+    level         INTEGER NOT NULL DEFAULT 0,
+    last_failure  TEXT
+);
+CREATE TABLE IF NOT EXISTS security_events (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    at      TEXT NOT NULL,
+    kind    TEXT NOT NULL,
+    detail  TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS audit (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
     at      TEXT NOT NULL,

@@ -25,3 +25,23 @@ def is_safe_email(email: str) -> bool:
 def normalize_email(email: str) -> str:
     """Forma canonica para comparar (solo ASCII, minusculas)."""
     return email.strip().lower()
+
+
+def mask_email(email: str) -> str:
+    """Forma que se puede mostrar o registrar sin exponer la cuenta: ma***@dominio."""
+    local, _, domain = email.partition("@")
+    return f"{local[:2] if len(local) > 2 else local[:1]}***@{domain}"
+
+
+def parse_email_list(value: str) -> frozenset[str]:
+    """Lee una lista separada por comas. Falla si alguna direccion no es segura
+    (letras de otros alfabetos, punycode, formato raro). El mensaje NO repite el correo."""
+    emails: set[str] = set()
+    for position, raw in enumerate(part for part in value.split(",") if part.strip()):
+        email = normalize_email(raw)
+        if not is_safe_email(email):
+            raise ValueError(
+                f"La direccion numero {position + 1} de la lista no es valida o usa caracteres no permitidos."
+            )
+        emails.add(email)
+    return frozenset(emails)

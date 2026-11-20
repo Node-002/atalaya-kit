@@ -103,6 +103,7 @@ def gmail_env(tmp_path, monkeypatch):
     monkeypatch.setenv("ATALAYA_DB_PATH", str(tmp_path / "atalaya.db"))
     monkeypatch.setenv("ATALAYA_ADMIN_PASSWORD", ADMIN_PASSWORD)
     monkeypatch.setenv("ATALAYA_SESSION_SECRET", "s" * 48)
+    monkeypatch.setenv("ATALAYA_LOGIN_DELAY", "0")
     return tmp_path
 
 
