@@ -8,6 +8,7 @@
 
 import hashlib
 import hmac
+import secrets
 import time
 from collections import defaultdict, deque
 
@@ -38,6 +39,9 @@ class AdminAuth:
         self._serializer = URLSafeTimedSerializer(secret, salt="atalaya-admin")
         self.secure_cookie = secure_cookie
         self._failures: dict[str, deque[float]] = defaultdict(deque)
+        self._sessions: dict[
+            str, float
+        ] = {}  # sid -> vencimiento; permite cerrar sesion de verdad
 
     def check_password(self, candidate: str) -> bool:
         return hmac.compare_digest(
@@ -45,17 +49,38 @@ class AdminAuth:
         )
 
     def new_session(self) -> str:
-        return self._serializer.dumps({"role": "admin"})
+        now = time.monotonic()
+        for sid in [k for k, exp in self._sessions.items() if exp < now]:
+            self._sessions.pop(sid, None)
+        sid = secrets.token_urlsafe(16)
+        self._sessions[sid] = now + SESSION_SECONDS
+        return self._serializer.dumps({"role": "admin", "sid": sid})
 
-    def is_admin(self, request: Request) -> bool:
+    def _session_id(self, request: Request) -> str | None:
         token = request.cookies.get(COOKIE)
         if not token:
-            return False
+            return None
         try:
             data = self._serializer.loads(token, max_age=SESSION_SECONDS)
         except (BadSignature, SignatureExpired):
-            return False
-        return data.get("role") == "admin"
+            return None
+        if data.get("role") != "admin":
+            return None
+        sid = data.get("sid")
+        return (
+            sid
+            if isinstance(sid, str) and self._sessions.get(sid, 0) > time.monotonic()
+            else None
+        )
+
+    def is_admin(self, request: Request) -> bool:
+        return self._session_id(request) is not None
+
+    def end_session(self, request: Request) -> None:
+        """Invalida la sesion en el servidor: una cookie copiada ya no sirve."""
+        sid = self._session_id(request)
+        if sid:
+            self._sessions.pop(sid, None)
 
     # --- limite de intentos -----------------------------------------------------------
     def _recent(self, client: str) -> deque[float]:
@@ -105,7 +130,8 @@ def build_admin_router(admin: AdminAuth, registry: Registry) -> APIRouter:
         return response
 
     @router.post("/auth/admin/logout")
-    def logout() -> JSONResponse:
+    def logout(request: Request) -> JSONResponse:
+        admin.end_session(request)
         response = JSONResponse({"status": "ok"})
         response.delete_cookie(COOKIE)
         return response
