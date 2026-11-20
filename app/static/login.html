@@ -11,13 +11,21 @@
   <header class="top"><h1>Atalaya <span>vigila tu correo</span></h1></header>
   <main class="estrecho">
     <h2>Acceso de administración</h2>
-    <form id="form" class="dlg">
-      <label for="clave">Contraseña</label>
+    <p id="error" class="resumen" role="alert" hidden>No pudimos iniciar tu sesión. Si crees que es un error, pide acceso a quien administra Atalaya.</p>
+
+    <section id="google" hidden>
+      <a class="btn btn-primary" href="/auth/admin/google/login">Iniciar sesión con Google</a>
+      <p class="nota">Usa la cuenta de Google que tu organización autorizó. Atalaya no guarda tu contraseña.</p>
+    </section>
+
+    <form id="form" class="dlg" hidden>
+      <label for="clave">Contraseña de administración</label>
       <input id="clave" type="password" autocomplete="current-password" required>
       <p id="msg" class="mensaje" role="alert"></p>
       <button type="submit" class="btn btn-primary">Entrar</button>
     </form>
-    <p class="nota">Solo la persona que administra Atalaya entra aquí. Si recibiste un enlace de invitación, ábrelo directamente: no necesitas esta página.</p>
+
+    <p class="nota">Solo la gente que administra Atalaya entra aquí. Si recibiste un enlace de invitación, ábrelo directamente: no necesitas esta página.</p>
   </main>
   <script src="/static/login.js"></script>
 </body>

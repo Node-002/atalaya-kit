@@ -176,7 +176,28 @@ async function disconnect(box) {
   }
 }
 
+const SECURITY_TEXT = {
+  bloqueo: "Dirección bloqueada por demasiados intentos",
+  acceso_denegado: "Una cuenta no autorizada intentó entrar",
+  ataque_distribuido: "Muchos intentos fallidos desde varias direcciones",
+};
+
+async function loadSecurity() {
+  const events = await api("/api/security/events");
+  const list = document.getElementById("eventos-seguridad");
+  list.replaceChildren();
+  events.slice(0, 6).forEach((e) => {
+    const li = el("li", "");
+    li.appendChild(el("strong", "", (SECURITY_TEXT[e.kind] || e.kind) + " "));
+    li.appendChild(el("span", "muted", "· " + formatDate(e.at)));
+    li.appendChild(el("div", "muted", e.detail));
+    list.appendChild(li);
+  });
+  document.getElementById("seguridad").hidden = !events.length;
+}
+
 async function load() {
+  if (authRequired) loadSecurity().catch(() => {});
   const coverage = await api("/api/coverage");
   renderCoverage(coverage);
   const query = filtroEl.value ? "?mailbox_id=" + encodeURIComponent(filtroEl.value) : "";
@@ -294,7 +315,14 @@ async function init() {
       "Modo conectado: solo para uso local con cuentas de prueba.";
     setInterval(() => load().catch(() => {}), 30000);
   }
-  if (authRequired) document.getElementById("btn-salir").hidden = false;
+  if (authRequired) {
+    document.getElementById("btn-salir").hidden = false;
+    api("/api/me").then((me) => {
+      const yo = document.getElementById("yo");
+      yo.textContent = "Sesión: " + me.id;
+      yo.hidden = false;
+    }).catch(() => {});
+  }
   await load();
 }
 

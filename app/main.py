@@ -21,8 +21,10 @@ from pydantic import BaseModel, Field
 
 from app import logsafe
 from app.admin import AdminAuth, build_admin_router
+from app.alerts import SecurityNotifier, SmtpConfig
 from app.auth import AuthContext, build_router, revoke_google_token
 from app.db import Database
+from app.identity import parse_email_list
 from app.llm import Explainer, explainer_from_env
 from app.models import Alert, Coverage
 from app.providers.base import MailProvider
@@ -49,6 +51,40 @@ def _need(name: str) -> str:
     return value
 
 
+def _build_admin(registry: Registry, base_url: str) -> AdminAuth:
+    """Configura el acceso de administracion desde variables de entorno (falla si es insegura)."""
+    try:
+        emails = parse_email_list(os.environ.get("ATALAYA_ADMIN_EMAILS", ""))
+    except ValueError as exc:
+        raise RuntimeError(f"ATALAYA_ADMIN_EMAILS: {exc}") from exc
+    smtp = None
+    if os.environ.get("ATALAYA_SMTP_HOST"):
+        smtp = SmtpConfig(
+            host=os.environ["ATALAYA_SMTP_HOST"],
+            port=int(os.environ.get("ATALAYA_SMTP_PORT", "587")),
+            user=os.environ.get("ATALAYA_SMTP_USER", ""),
+            password=os.environ.get("ATALAYA_SMTP_PASSWORD", ""),
+            sender=os.environ.get("ATALAYA_SMTP_FROM", ""),
+        )
+    notifier = SecurityNotifier(
+        registry,
+        contact=os.environ.get("ATALAYA_SECURITY_CONTACT") or None,
+        webhook=os.environ.get("ATALAYA_ALERT_WEBHOOK") or None,
+        smtp=smtp,
+    )
+    return AdminAuth(
+        _need("ATALAYA_SESSION_SECRET"),
+        registry,
+        password=os.environ.get("ATALAYA_ADMIN_PASSWORD") or None,
+        emails=emails,
+        domain=os.environ.get("ATALAYA_ADMIN_DOMAIN") or None,
+        secure_cookie=base_url.startswith("https"),
+        notifier=notifier,
+        failure_delay=float(os.environ.get("ATALAYA_LOGIN_DELAY", "0.4")),
+        trust_proxy=os.environ.get("ATALAYA_TRUST_PROXY") == "1",
+    )
+
+
 def create_app(
     provider: MailProvider | None = None, explainer: Explainer | None = None
 ) -> FastAPI:
@@ -72,15 +108,12 @@ def create_app(
         client_secrets = load_client_secrets(secrets_file)
         fernet = Fernet(_need("ATALAYA_FERNET_KEY").encode())
         db = Database(os.environ.get("ATALAYA_DB_PATH", "data/atalaya.db"))
-        admin = AdminAuth(
-            _need("ATALAYA_ADMIN_PASSWORD"),
-            _need("ATALAYA_SESSION_SECRET"),
-            secure_cookie=base_url.startswith("https"),
-        )
     else:
         fernet = Fernet(Fernet.generate_key())
         db = Database(":memory:")
     registry = Registry(db, fernet)
+    if mode == "gmail" and not legacy:
+        admin = _build_admin(registry, base_url)
 
     demo_like = mode == "demo" or isinstance(provider, DemoProvider)
     if explainer is None:
@@ -184,7 +217,9 @@ def create_app(
     def health() -> dict:
         return {"status": "ok", "mode": mode, "auth": admin is not None}
 
-    actor = "administrador" if admin else "admin-demo"
+    def actor_of(request: Request) -> str:
+        """Quien hizo la accion (identidad enmascarada del administrador, o demo)."""
+        return (admin.identity(request) if admin else None) or "admin-demo"
 
     # --- Alertas -------------------------------------------------------------------------
     def _alert_or_404(alert_id: str) -> Alert:
@@ -201,10 +236,10 @@ def create_app(
     def get_alert(alert_id: str) -> Alert:
         return _alert_or_404(alert_id)
 
-    def _act(fn, alert_id: str) -> Alert:
+    def _act(fn, alert_id: str, request: Request) -> Alert:
         _alert_or_404(alert_id)
         try:
-            return fn(alert_id, actor)
+            return fn(alert_id, actor_of(request))
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:  # fallo del proveedor (token revocado, red, API)
@@ -214,16 +249,16 @@ def create_app(
             ) from exc
 
     @app.post("/api/alerts/{alert_id}/approve", response_model=Alert)
-    def approve(alert_id: str) -> Alert:
-        return _act(store.approve, alert_id)
+    def approve(alert_id: str, request: Request) -> Alert:
+        return _act(store.approve, alert_id, request)
 
     @app.post("/api/alerts/{alert_id}/reject", response_model=Alert)
-    def reject(alert_id: str) -> Alert:
-        return _act(store.reject, alert_id)
+    def reject(alert_id: str, request: Request) -> Alert:
+        return _act(store.reject, alert_id, request)
 
     @app.post("/api/alerts/{alert_id}/legit", response_model=Alert)
-    def legit(alert_id: str) -> Alert:
-        return _act(store.mark_legit, alert_id)
+    def legit(alert_id: str, request: Request) -> Alert:
+        return _act(store.mark_legit, alert_id, request)
 
     @app.post("/api/poll")
     def poll() -> dict[str, int]:
@@ -249,22 +284,22 @@ def create_app(
         return result
 
     @app.delete("/api/mailboxes/{mailbox_id}")
-    def disconnect_mailbox(mailbox_id: str) -> dict[str, str]:
+    def disconnect_mailbox(mailbox_id: str, request: Request) -> dict[str, str]:
         row = registry.get_mailbox(mailbox_id)
         if row is None:
             raise HTTPException(status_code=404, detail="Buzon no encontrado.")
         if row["kind"] == "gmail":
             token = registry.load_token(mailbox_id) or {}
             revoke_google_token(token.get("refresh_token") or token.get("token"))
-        registry.delete_mailbox(mailbox_id, actor)
+        registry.delete_mailbox(mailbox_id, actor_of(request))
         store.remove_provider(mailbox_id)
         return {"status": "disconnected"}
 
     # --- Invitaciones (solo administracion) --------------------------------------------------
     @app.post("/api/invites")
-    def create_invite(body: InviteIn) -> dict:
+    def create_invite(body: InviteIn, request: Request) -> dict:
         try:
-            invite_id, token = registry.create_invite(body.label, actor)
+            invite_id, token = registry.create_invite(body.label, actor_of(request))
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         invite = next(i for i in registry.list_invites() if i["id"] == invite_id)
@@ -279,8 +314,8 @@ def create_app(
         return registry.list_invites()
 
     @app.post("/api/invites/{invite_id}/revoke")
-    def revoke_invite(invite_id: str) -> dict[str, str]:
-        if not registry.revoke_invite(invite_id, actor):
+    def revoke_invite(invite_id: str, request: Request) -> dict[str, str]:
+        if not registry.revoke_invite(invite_id, actor_of(request)):
             raise HTTPException(
                 status_code=409, detail="La invitacion ya no se puede revocar."
             )
@@ -292,7 +327,7 @@ def create_app(
 
     # --- Demo ------------------------------------------------------------------------------
     @app.post("/api/demo/reset")
-    def demo_reset() -> dict[str, str]:
+    def demo_reset(request: Request) -> dict[str, str]:
         if mode != "demo":
             raise HTTPException(status_code=404, detail="Solo disponible en modo demo.")
         for mailbox_id, _label, prov in store.providers():
@@ -300,7 +335,7 @@ def create_app(
                 if isinstance(prov, DemoProvider):
                     prov.reset()
             else:  # buzones agregados por invitacion en esta demo
-                registry.delete_mailbox(mailbox_id, actor)
+                registry.delete_mailbox(mailbox_id, actor_of(request))
                 store.remove_provider(mailbox_id)
         store.clear()
         store.poll()

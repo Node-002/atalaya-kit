@@ -13,6 +13,7 @@
     <h1>Atalaya <span>vigila tu correo</span></h1>
     <div class="top-actions">
       <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
+      <span id="yo" class="muted" hidden></span>
       <button id="btn-invitar" type="button" class="btn btn-primary">Invitar buzón</button>
       <button id="btn-salir" type="button" class="btn btn-ghost" hidden>Salir</button>
     </div>
@@ -22,6 +23,12 @@
     <strong>Demostración con datos simulados.</strong>
     No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
   </div>
+
+  <section id="seguridad" class="seguridad" aria-labelledby="titulo-seguridad" hidden>
+    <h2 id="titulo-seguridad">Alertas de seguridad (últimas 24 horas)</h2>
+    <ul id="eventos-seguridad"></ul>
+    <p class="nota">Son intentos de acceso a este panel. Si no los reconoces, cambia las credenciales y revisa quién está autorizado.</p>
+  </section>
 
   <main>
     <section class="intro" aria-labelledby="titulo-alertas">

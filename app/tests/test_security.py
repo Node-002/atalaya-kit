@@ -45,6 +45,7 @@ def gmail_client(tmp_path, monkeypatch):
     monkeypatch.setenv("ATALAYA_DB_PATH", str(tmp_path / "a.db"))
     monkeypatch.setenv("ATALAYA_ADMIN_PASSWORD", PASSWORD)
     monkeypatch.setenv("ATALAYA_SESSION_SECRET", "s" * 48)
+    monkeypatch.setenv("ATALAYA_LOGIN_DELAY", "0")
     return TestClient(create_app(), follow_redirects=False, headers=CSRF)
 
 
