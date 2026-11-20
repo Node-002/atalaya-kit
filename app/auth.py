@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app.admin import AdminAuth
+from app.identity import is_safe_email, normalize_email
 from app.providers.base import MailProvider
 from app.providers.demo import new_demo_employee
 from app.registry import Registry
@@ -139,7 +140,7 @@ def build_router(ctx: AuthContext) -> APIRouter:
                 max_age=STATE_TTL,
                 httponly=True,
                 samesite="lax",
-                secure=False,
+                secure=REDIRECT_URI.startswith("https"),
             )
             return response
 
@@ -181,6 +182,15 @@ def build_router(ctx: AuthContext) -> APIRouter:
                     detail="Google no entrego permiso de acceso continuo.",
                 )
 
+            if not is_safe_email(email):
+                # Letras de otro alfabeto, acentos o punycode: posible suplantacion.
+                revoke_google_token(creds.refresh_token)
+                registry.audit("sistema", "mailbox_rejected_identity", ascii(email))
+                raise HTTPException(
+                    status_code=400,
+                    detail="Esa direccion usa caracteres no permitidos y no se puede conectar.",
+                )
+            email = normalize_email(email)
             existing = registry.find_mailbox_by_email(email)
             label = "Administracion"
             if invite_id:

@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app import logsafe
 from app.admin import AdminAuth, build_admin_router
 from app.auth import AuthContext, build_router, revoke_google_token
 from app.db import Database
@@ -51,6 +52,7 @@ def _need(name: str) -> str:
 def create_app(
     provider: MailProvider | None = None, explainer: Explainer | None = None
 ) -> FastAPI:
+    logsafe.install()  # que los tokens de la URL no queden en los registros
     mode = os.environ.get("ATALAYA_MODE", "demo")
     if mode not in ("demo", "gmail"):
         raise RuntimeError("ATALAYA_MODE debe ser 'demo' o 'gmail'.")
