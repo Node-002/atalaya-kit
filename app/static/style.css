@@ -95,3 +95,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .6); }
 .seguridad ul { margin: 0 0 8px; padding-left: 20px; }
 .seguridad li { margin: 6px 0; }
 a.btn { display: inline-block; text-decoration: none; }
+.historial { margin-top: 36px; }
+.lista-historial { list-style: none; margin: 0; padding: 0; }
+.evento { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem; word-break: break-word; }
+.hora-ev { font-size: .85rem; }

@@ -160,7 +160,7 @@ class AlertStore:
 
     def approve(self, alert_id: str, by: str) -> Alert:
         with self._lock:
-            alert = self._require_pending(alert_id)
+            alert = self._require_quarantinable(alert_id)
             provider, ref = self._provider_for(alert_id)
             provider.quarantine(ref)
             alert.status = Status.quarantined
@@ -182,6 +182,14 @@ class AlertStore:
             alert.status = Status.dismissed
             self._record(alert, "mark_legit", by)
             return alert
+
+    def _require_quarantinable(self, alert_id: str) -> Alert:
+        """La cuarentena es una decision humana y reversible: se puede aplicar a cualquier
+        correo que aun no este en cuarentena (tambien a uno que Atalaya dejo pasar)."""
+        alert = self._alerts[alert_id]
+        if alert.status is Status.quarantined:
+            raise ValueError("El correo ya esta en cuarentena.")
+        return alert
 
     def _require_pending(self, alert_id: str) -> Alert:
         alert = self._alerts[alert_id]
