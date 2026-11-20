@@ -266,3 +266,20 @@ def test_authorized_accounts_never_appear_in_pages_or_static_files(app):
     pages.append(client.get("/").text)  # redirige al login: sin datos
     for body in pages:
         assert ADMIN not in body and ADMIN.split("@")[0] not in body
+
+
+# --- Diferencia de reloj con Google (defecto real encontrado en la primera prueba) ------------------
+def test_identity_token_verification_tolerates_a_small_clock_difference(monkeypatch):
+    from app import auth
+
+    seen = {}
+
+    def fake_verify(token, request, audience, clock_skew_in_seconds):
+        seen.update(token=token, audience=audience, skew=clock_skew_in_seconds)
+        return {"email": "x"}
+
+    monkeypatch.setattr(auth.google_id_token, "verify_oauth2_token", fake_verify)
+    assert auth._verify_identity_token("tok", "mi-client-id") == {"email": "x"}
+    assert seen["audience"] == "mi-client-id"
+    # tolera unos segundos de reloj atrasado, pero no cualquier cantidad
+    assert 5 <= seen["skew"] <= 60
