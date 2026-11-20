@@ -51,3 +51,8 @@ Login con Google → leer correos nuevos → analizar → alerta en panel. Lo de
 - [ ] Preguntar cómo se conectará lo virtual con el encuentro del viernes 20 (¿transmisión, canal de chat, mentorías en línea?).
 - [ ] Verificar internet estable y un plan B de conexión (datos móviles) para el día de la entrega y la demo.
 - [ ] Local: adaptar la lista de marcas y estafas también a Panamá (bancos locales, apps de pago como Yappy, entidades públicas). Verificá nombres reales antes de usarlos.
+
+## Actualización (17 nov): equipo
+- La persona que se había considerado como posible compañero declinó (está con exámenes semestrales). **Se participa en solitario.** Team Match: no se activa.
+- Como el tiempo es el cuello de botella, el trabajo se divide en dos pistas paralelas (ver respuesta en el chat y `docs/MVP_ALCANCE.md`): conector de correo y análisis por un lado; interfaz y modo demo por el otro, apoyados en IA, con un contrato de API definido antes de empezar.
+- Recordatorios programados: viernes 20, 9:45 a. m. (Panamá) y domingo 22, 8:00 p. m. (Panamá). Funcionan solo si la app de Claude está abierta; poner también una alarma en el teléfono.
