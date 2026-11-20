@@ -146,9 +146,8 @@ async function init() {
     reset.hidden = true;
     document.getElementById("banner").textContent =
       "Modo conectado: solo para uso local con cuentas de prueba.";
-    setInterval(async () => {
-      try { await api("/api/poll", "POST"); await load(); } catch (err) { msgEl.textContent = err.message; }
-    }, 60000);
+    setInterval(() => load().catch(() => {}), 30000);
+    await api("/api/poll", "POST").catch(() => {});
   }
   await load();
 }

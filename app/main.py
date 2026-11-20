@@ -5,8 +5,10 @@ Modos (variable ATALAYA_MODE):
 - gmail: conexion real con Gmail; solo uso local con usuarios de prueba.
 """
 
+import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,6 +23,7 @@ from app.store import AlertStore
 
 load_dotenv()
 log = logging.getLogger("atalaya")
+POLL_SECONDS = int(os.environ.get("ATALAYA_POLL_SECONDS", "60"))
 
 STATIC_DIR = Path(__file__).parent / "static"
 ADMIN = "admin-demo"  # en modo conectado vendra de la sesion autenticada
@@ -49,7 +52,25 @@ def create_app(provider: MailProvider | None = None) -> FastAPI:
     store = AlertStore(provider)
     store.poll()
 
-    app = FastAPI(title="Atalaya", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        task = None
+        if gmail_setup:  # el servidor consulta solo; no depende de la pestana abierta
+
+            async def _loop() -> None:
+                while True:
+                    await asyncio.sleep(POLL_SECONDS)
+                    try:
+                        await asyncio.to_thread(store.poll)
+                    except Exception:
+                        log.exception("Fallo la consulta periodica de correo")
+
+            task = asyncio.create_task(_loop())
+        yield
+        if task:
+            task.cancel()
+
+    app = FastAPI(title="Atalaya", version="0.1.0", lifespan=lifespan)
 
     @app.middleware("http")
     async def security(request: Request, call_next):
@@ -123,11 +144,8 @@ def create_app(provider: MailProvider | None = None) -> FastAPI:
 
     @app.get("/api/coverage", response_model=list[Coverage])
     def coverage() -> list[Coverage]:
-        return [
-            Coverage(
-                account=provider.account_name(), status=provider.connection_status()
-            )
-        ]
+        status = provider.connection_status()  # primero: fija el nombre de la cuenta
+        return [Coverage(account=provider.account_name(), status=status)]
 
     @app.post("/api/demo/reset")
     def demo_reset() -> dict[str, str]:
