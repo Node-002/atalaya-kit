@@ -4,6 +4,7 @@ Guarda veredicto, senales, hash de referencia y estado. Nunca cuerpos ni adjunto
 """
 
 import hashlib
+import threading
 from datetime import UTC, datetime
 
 from app import analyzers, decision
@@ -24,12 +25,17 @@ class AlertStore:
         self.provider = provider
         self._alerts: dict[str, Alert] = {}
         self._refs: dict[str, str] = {}  # alert id -> referencia real del proveedor
+        self._lock = threading.Lock()
 
     def clear(self) -> None:
         self._alerts.clear()
         self._refs.clear()
 
     def poll(self) -> None:
+        with self._lock:
+            self._poll()
+
+    def _poll(self) -> None:
         for msg in self.provider.list_new_messages():
             signals = analyzers.analyze(msg)
             risk = decision.risk_of(signals)
