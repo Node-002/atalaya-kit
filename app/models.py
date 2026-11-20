@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -64,6 +65,7 @@ class Alert(BaseModel):
     risk: Risk
     signals: list[Signal]
     explanation: str
+    explanation_source: Literal["rules", "ai", "simulated"] = "rules"
     status: Status
     actions: list[ActionRecord] = Field(default_factory=list)
 

@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.llm import Explainer, explainer_from_env
 from app.models import Alert, Coverage
 from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider
@@ -29,7 +30,9 @@ STATIC_DIR = Path(__file__).parent / "static"
 ADMIN = "admin-demo"  # en modo conectado vendra de la sesion autenticada
 
 
-def create_app(provider: MailProvider | None = None) -> FastAPI:
+def create_app(
+    provider: MailProvider | None = None, explainer: Explainer | None = None
+) -> FastAPI:
     mode = os.environ.get("ATALAYA_MODE", "demo")
     gmail_setup = None
     if provider is None:
@@ -49,7 +52,14 @@ def create_app(provider: MailProvider | None = None) -> FastAPI:
         else:
             raise RuntimeError("ATALAYA_MODE debe ser 'demo' o 'gmail'.")
 
-    store = AlertStore(provider)
+    if explainer is None:
+        # demo publica: resumen simulado (no gasta saldo). Conectado: IA solo si se activa.
+        explainer = explainer_from_env(
+            "simulated" if isinstance(provider, DemoProvider) else "off"
+        )
+    store = AlertStore(
+        provider, explainer, os.environ.get("ATALAYA_LLM_POLICY", "flagged")
+    )
     store.poll()
 
     @asynccontextmanager

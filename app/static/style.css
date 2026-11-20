@@ -61,3 +61,5 @@ footer { max-width: 880px; margin: 0 auto; padding: 20px; color: var(--muted); f
 .resumen { margin: 8px 0 0; padding: 10px 14px; border-radius: 8px; background: #3a1d1d; border: 1px solid #6e3030; }
 .resumen.ok { background: #14301c; border-color: #2ea043; }
 .hora { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
+.resumen-ia { margin: 0 0 10px; padding: 8px 12px; border-left: 3px solid var(--accent); background: #12202f; border-radius: 4px; }
+.resumen-ia .tag { font-size: .75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .03em; }

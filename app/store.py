@@ -8,7 +8,8 @@ import threading
 from datetime import UTC, datetime
 
 from app import analyzers, decision
-from app.models import ActionRecord, Alert, Status
+from app.llm import Explainer, LLMVerdict, semantic_signals
+from app.models import ActionRecord, Alert, Message, Risk, Signal, Status
 from app.providers.base import MailProvider
 
 
@@ -21,8 +22,19 @@ def _now() -> datetime:
 
 
 class AlertStore:
-    def __init__(self, provider: MailProvider) -> None:
+    def __init__(
+        self,
+        provider: MailProvider,
+        explainer: Explainer | None = None,
+        llm_policy: str = "flagged",
+    ) -> None:
         self.provider = provider
+        self.explainer = explainer
+        # "flagged": solo riesgo medio/alto (barato). "all": todos (detecta mas, cuesta mas).
+        self.llm_policy = llm_policy
+        self._verdicts: dict[
+            str, LLMVerdict | None
+        ] = {}  # cache: una llamada por correo
         self._alerts: dict[str, Alert] = {}
         self._refs: dict[str, str] = {}  # alert id -> referencia real del proveedor
         self._lock = threading.Lock()
@@ -30,6 +42,18 @@ class AlertStore:
     def clear(self) -> None:
         self._alerts.clear()
         self._refs.clear()
+        self._verdicts.clear()
+
+    def _ai_verdict(
+        self, msg: Message, signals: list[Signal], risk: Risk
+    ) -> LLMVerdict | None:
+        if self.explainer is None:
+            return None
+        if self.llm_policy != "all" and risk is Risk.low:
+            return None
+        if msg.ref not in self._verdicts:
+            self._verdicts[msg.ref] = self.explainer.explain(msg, signals)
+        return self._verdicts[msg.ref]
 
     def poll(self) -> None:
         with self._lock:
@@ -38,6 +62,10 @@ class AlertStore:
     def _poll(self) -> None:
         for msg in self.provider.list_new_messages():
             signals = analyzers.analyze(msg)
+            risk = decision.risk_of(signals)
+            verdict = self._ai_verdict(msg, signals, risk)
+            # La IA solo AGREGA senales (con peso y tope del codigo): nunca baja el riesgo.
+            signals = signals + semantic_signals(verdict)
             risk = decision.risk_of(signals)
             label, status = decision.plan_for(risk)
             alert_id = _ref_hash(msg.ref)
@@ -54,7 +82,10 @@ class AlertStore:
                 sender_domain=analyzers.domain_of(msg.sender),
                 risk=risk,
                 signals=signals,
-                explanation=decision.explain(signals),
+                explanation=verdict.explanation
+                if verdict
+                else decision.explain(signals),
+                explanation_source=self.explainer.source if verdict else "rules",
                 status=status,
                 actions=actions,
             )
