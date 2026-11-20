@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class Risk(str, Enum):
@@ -66,6 +66,20 @@ class Alert(BaseModel):
     explanation: str
     status: Status
     actions: list[ActionRecord] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def priority(self) -> int:
+        """0 = decidir ya, 1 = revisar, 2 = atendido con riesgo, 3 = sin accion pendiente."""
+        if self.status is Status.pending_approval:
+            return 0
+        if self.risk is Risk.medium and self.status is Status.labeled:
+            return 1
+        if self.status is Status.quarantined or (
+            self.risk is Risk.high and self.status is Status.labeled
+        ):
+            return 2
+        return 3
 
 
 class Coverage(BaseModel):

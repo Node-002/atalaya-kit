@@ -4,18 +4,22 @@ Todos los correos son ficticios e inofensivos. Es el unico proveedor que se
 usa en el despliegue publico.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from app.models import ConnectionStatus, Label, Message
 
 _NOW = datetime(2026, 11, 20, 15, 0, tzinfo=UTC)
 
 
+def _ago(minutes: int) -> datetime:
+    return _NOW - timedelta(minutes=minutes)
+
+
 def _messages() -> list[Message]:
     return [
         Message(
             ref="demo-001",
-            received_at=_NOW,
+            received_at=_ago(95),
             sender="Seguridad Banco General <alertas@bancogeneral-seguridad.com>",
             reply_to="soporte@verificacion-cuentas.net",
             subject="URGENTE: su cuenta sera bloqueada hoy",
@@ -31,7 +35,7 @@ def _messages() -> list[Message]:
         ),
         Message(
             ref="demo-002",
-            received_at=_NOW,
+            received_at=_ago(40),
             sender="Maria Lopez <maria@proveedor-local.example>",
             reply_to=None,
             subject="Factura de noviembre",
@@ -43,7 +47,7 @@ def _messages() -> list[Message]:
         ),
         Message(
             ref="demo-003",
-            received_at=_NOW,
+            received_at=_ago(5),
             sender="Premios <premios@sorteo-ganador.example>",
             reply_to=None,
             subject="Felicidades, ganaste",

@@ -84,11 +84,23 @@ def _reply_to(msg: Message) -> list[Signal]:
     return []
 
 
+def _is_official(dom: str, official: set[str]) -> bool:
+    """Dominio oficial o subdominio suyo (mail.bancogeneral.com)."""
+    return any(dom == d or dom.endswith("." + d) for d in official)
+
+
+def _mentions_brand(stem: str, brand: str) -> bool:
+    """Marcas cortas (bac, bncr) solo cuentan como palabra completa del dominio,
+    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte."""
+    tokens = re.split(r"[^a-z0-9]+", stem)
+    return brand in tokens or (len(brand) >= 8 and brand in stem)
+
+
 def _lookalike(msg: Message) -> list[Signal]:
     dom = domain_of(msg.sender)
     stem = dom.translate(_LEET)
-    for brand, legit in BRANDS.items():
-        if brand in stem and dom not in legit:
+    for brand, official in BRANDS.items():
+        if _mentions_brand(stem, brand) and not _is_official(dom, official):
             return [
                 Signal(
                     code="lookalike_domain",

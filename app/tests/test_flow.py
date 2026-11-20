@@ -129,3 +129,22 @@ def test_panel_served_with_security_headers(env):
     assert "Demostración con datos simulados" in resp.text
     assert "default-src 'self'" in resp.headers["content-security-policy"]
     assert client.get("/static/app.js").status_code == 200
+
+
+def test_alerts_are_ordered_by_priority_then_newest(env):
+    client, _ = env
+    alerts = client.get("/api/alerts").json()
+    priorities = [a["priority"] for a in alerts]
+    assert priorities == sorted(priorities)
+    assert alerts[0]["priority"] == 0 and alerts[-1]["priority"] == 3
+    high = [a for a in alerts if a["priority"] == 0]
+    times = [a["received_at"] for a in high]
+    assert times == sorted(times, reverse=True)  # lo mas reciente primero
+
+
+def test_priority_drops_after_quarantine(env):
+    client, _ = env
+    alert = _by_domain(client, "bancogeneral-seguridad.com")
+    assert alert["priority"] == 0
+    done = client.post(f"/api/alerts/{alert['id']}/approve").json()
+    assert done["priority"] == 2
