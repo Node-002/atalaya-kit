@@ -40,6 +40,14 @@ Si no se anota, se considera que no existió.
 Claude (Claude Code) para planificar, analizar alternativas, redactar documentación y generar un borrador de
 diapositivas de una idea descartada. Detalle en `docs/USO_DE_IA.md`.
 
+## Registro del inicio del hackathon (20 nov 2026, hora de Panamá)
+- **~10:00** Inicio oficial según la página de Dojo.
+- **Antes de las 10:00:** solo documentación (commits hasta `3e34d65`).
+- **Rama `hackathon/mvp`:** commit `dd302f2` (documentación de planificación) y `c2ade8c` "inicio del hackathon" (`CLAUDE.md`, `PRD.md`, ADR 0001, `.env.example`). Etiqueta `inicio-hackathon` sobre `c2ade8c`.
+- **10:37** `gitleaks detect`: 5 commits escaneados, sin hallazgos.
+- **~10:40** Repositorio privado `atalaya` creado en GitHub y primer push.
+- **Después:** esqueleto de `app/` (FastAPI `/health`, modelos del contrato, `DemoProvider` con 3 correos, analizadores mínimos, motor de decisión, almacén en memoria, 11 pruebas). Aún sin login de Google, sin IA, sin interfaz.
+
 ## Regla de trabajo
 - El primer commit del repositorio contiene **solo documentación**.
 - El código del producto se escribe y se confirma a partir del **viernes 20 de noviembre, 10:00 a. m. (hora de Panamá)**.
