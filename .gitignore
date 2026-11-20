@@ -1,6 +1,7 @@
 # Secretos: nunca versionar
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 client_secret*.json
