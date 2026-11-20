@@ -64,6 +64,15 @@ function renderAlert(alert) {
   badges.appendChild(el("span", "badge estado", STATUS_TEXT[alert.status]));
   card.appendChild(badges);
 
+  if (alert.explanation_source !== "rules") {
+    const resumen = el("p", "resumen-ia");
+    resumen.appendChild(
+      el("span", "tag", alert.explanation_source === "ai" ? "Resumen con IA" : "Resumen simulado (sin IA real)"),
+    );
+    resumen.appendChild(document.createTextNode(" " + alert.explanation.replace(/^Resumen simulado:\s*/, "")));
+    card.appendChild(resumen);
+  }
+
   card.appendChild(el("p", "porque", alert.risk === "low" ? "Todo parece normal." : "Por qué desconfiamos:"));
   if (alert.signals.length) {
     const ul = el("ul", "signals");
