@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atalaya — el agente que vigila tu correo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <a class="skip" href="#alertas">Saltar a las alertas</a>
+
+  <header class="top">
+    <h1>Atalaya <span>vigila tu correo</span></h1>
+    <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
+  </header>
+
+  <div class="demo-banner" role="note">
+    <strong>Demostración con datos simulados.</strong>
+    No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
+  </div>
+
+  <main>
+    <section class="intro" aria-labelledby="titulo-alertas">
+      <h2 id="titulo-alertas">Correos que requieren tu atención</h2>
+      <p>Atalaya revisa cada correo nuevo, te explica por qué desconfía y <strong>nunca aísla ni borra nada sin tu aprobación</strong>.</p>
+      <button id="reset" type="button" class="btn btn-ghost">Reiniciar demostración</button>
+    </section>
+
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+    <section id="alertas" aria-live="polite" tabindex="-1"></section>
+  </main>
+
+  <footer>
+    <p>Privacidad: Atalaya solo guarda el veredicto, las señales y un identificador. No guarda el contenido de tus correos.</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

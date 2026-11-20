@@ -4,14 +4,18 @@ Modo 'gmail' se implementa despues; hoy se rechaza explicitamente.
 """
 
 import os
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.models import Alert, Coverage
 from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider
 from app.store import AlertStore
 
+STATIC_DIR = Path(__file__).parent / "static"
 ADMIN = "admin-demo"  # en modo conectado vendra de la sesion autenticada
 
 
@@ -26,6 +30,29 @@ def create_app(provider: MailProvider | None = None) -> FastAPI:
     store.poll()
 
     app = FastAPI(title="Atalaya", version="0.1.0")
+
+    @app.middleware("http")
+    async def security(request: Request, call_next):
+        # CSRF: un formulario de otro sitio no puede enviar cabeceras personalizadas.
+        if (
+            request.method == "POST"
+            and request.url.path.startswith("/api/")
+            and request.headers.get("x-requested-with") != "atalaya"
+        ):
+            return JSONResponse({"detail": "Solicitud no permitida."}, status_code=403)
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+    @app.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
     def _alert_or_404(alert_id: str) -> Alert:
         alert = store.get(alert_id)
