@@ -92,15 +92,38 @@ async function act(id, verb, okMessage) {
   }
 }
 
-async function load() {
-  const [alerts, coverage] = await Promise.all([api("/api/alerts"), api("/api/coverage")]);
+let mode = "demo";
 
+function renderCoverage(coverage) {
   covEl.replaceChildren();
   coverage.forEach((c) => {
     const ok = c.status === "connected";
     covEl.appendChild(el("span", ok ? "ok" : "bad", ok ? "● Vigilando" : "● Sin cobertura"));
-    covEl.appendChild(document.createTextNode(" · " + c.account));
+    covEl.appendChild(document.createTextNode(" · " + c.account + " "));
+    if (mode === "gmail" && !ok) {
+      const link = el("a", "btn btn-primary", "Conectar con Google");
+      link.href = "/auth/google/login";
+      covEl.appendChild(link);
+    }
+    if (mode === "gmail" && ok) {
+      covEl.appendChild(button("Desconectar", "btn btn-ghost", disconnect));
+    }
   });
+}
+
+async function disconnect() {
+  try {
+    await api("/auth/disconnect", "POST");
+    msgEl.textContent = "Cuenta desconectada y acceso revocado.";
+    await load();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  }
+}
+
+async function load() {
+  const [alerts, coverage] = await Promise.all([api("/api/alerts"), api("/api/coverage")]);
+  renderCoverage(coverage);
 
   alertsEl.replaceChildren(...alerts.map(renderAlert));
   if (!alerts.length) alertsEl.appendChild(el("p", "", "No hay correos por revisar."));
@@ -116,4 +139,18 @@ document.getElementById("reset").addEventListener("click", async () => {
   }
 });
 
-load().catch((err) => { msgEl.textContent = err.message; });
+async function init() {
+  mode = (await api("/health")).mode;
+  const reset = document.getElementById("reset");
+  if (mode === "gmail") {
+    reset.hidden = true;
+    document.getElementById("banner").textContent =
+      "Modo conectado: solo para uso local con cuentas de prueba.";
+    setInterval(async () => {
+      try { await api("/api/poll", "POST"); await load(); } catch (err) { msgEl.textContent = err.message; }
+    }, 60000);
+  }
+  await load();
+}
+
+init().catch((err) => { msgEl.textContent = err.message; });
