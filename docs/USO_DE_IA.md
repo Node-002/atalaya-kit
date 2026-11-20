@@ -21,7 +21,8 @@ Completar durante el trabajo. Para cada pieza importante, anotar:
 
 | Fecha/hora | Qué se pidió a la IA | Qué generó | Qué corregí o decidí yo |
 |---|---|---|---|
-| | | | |
+| 20 nov, mañana | Redactar `CLAUDE.md`, `PRD.md` y ADR 0001 a partir de los documentos de planificación | Borradores de los tres archivos y `.env.example` | Revisé el alcance; detecté y corregí que `.gitignore` bloqueaba `.env.example`; verifiqué commits con correo noreply |
+| 20 nov, mañana | Esqueleto de `app/`: modelos, `MailProvider`, `DemoProvider`, reglas, decisión, API y pruebas | Código de ~10 archivos y 11 pruebas | Revisé contra el contrato; `ruff` y `bandit` limpios; decidí que Gmail se prueba solo localmente y el público es solo demo |
 
 ## Qué hizo la persona (no la IA)
 Anotar decisiones de diseño, pruebas, correcciones de seguridad y validaciones que se hicieron manualmente.
