@@ -59,11 +59,11 @@ function renderAlert(alert) {
 
   const actions = el("div", "actions");
   if (alert.status === "pending_approval") {
-    actions.appendChild(button("Poner en cuarentena", "btn btn-danger", () => act(alert.id, "approve", "Correo puesto en cuarentena.")));
+    actions.appendChild(button("Poner en cuarentena", "btn btn-danger", () => act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.")));
     actions.appendChild(button("Dejarlo donde está", "btn", () => act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.")));
   }
   if (alert.risk !== "low" && alert.status !== "dismissed") {
-    actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo.")));
+    actions.appendChild(button("Es legítimo", "btn btn-primary", () => act(alert.id, "legit", "Marcado como legítimo: el correo volvió a tu bandeja de entrada.")));
   }
   card.appendChild(actions);
 
