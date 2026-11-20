@@ -38,6 +38,17 @@ Para estos casos, la **aprobación humana** (nunca se aísla sin tu decisión) y
 - Que no hay falsos positivos.
 - Que la IA ya mejora estos números: aún no se probó.
 
+## Dominios que imitan marcas con letras de otros alfabetos (homógrafos)
+Añadido el 20 nov por la tarde, **fuera del corpus de 30** (no cambia esas métricas). Cubierto con 10 pruebas dedicadas en `app/tests/test_homograph.py`.
+
+Antes de este cambio, un dominio como `b[a cirílica]ncogeneral.com` o con una vocal acentuada salía como **riesgo bajo**, y un correo con "Banco General" solo en el nombre visible también. Ahora:
+- **Letras confundibles** (cirílico y griego frecuentes) y acentos se reducen a su apariencia latina antes de comparar con las marcas; los dominios en punycode (`xn--`) se decodifican.
+- **Señales nuevas:** `homograph_domain` (30), `mixed_script_domain` (40, mezcla de alfabetos en una misma parte del dominio) y `display_name_brand` (30, nombre visible de marca con dominio ajeno).
+- **También se revisan** la dirección de respuesta y los enlaces, no solo el remitente.
+- **No marca** dominios en español legítimos con tildes o ñ, ni subdominios oficiales.
+
+**Limitaciones:** la tabla de confusables es parcial (no es la lista completa de Unicode, UTS #39); la lista de marcas son 3 y está pendiente de verificar con nombres reales; solo se detecta el parecido con marcas de esa lista (un dominio parecido a una marca desconocida no se detecta); y no se evalúan trucos visuales dentro de imágenes del correo.
+
 ## Siguiente
 1. Medir el efecto de la explicación con IA sobre P06, P08 y P13 (y sobre L03, L08, L14) cuando esté integrada.
 2. Ampliar el corpus con correos de las pruebas reales de Gmail y, si es posible, correos de phishing públicos anonimizados.

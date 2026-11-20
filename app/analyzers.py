@@ -7,6 +7,7 @@ Pendiente: lista de marcas CR/PA a verificar con nombres reales.
 import re
 from email.utils import parseaddr
 
+from app import lookalike
 from app.models import Message, Signal
 
 # Marca -> dominios legitimos. VERIFICAR nombres reales antes de usar en produccion.
@@ -14,6 +15,13 @@ BRANDS: dict[str, set[str]] = {
     "bancogeneral": {"bancogeneral.com"},
     "bncr": {"bncr.fi.cr"},
     "bac": {"baccredomatic.com"},
+}
+
+# Nombres con los que una marca se muestra a la gente (VERIFICAR).
+BRAND_NAMES: dict[str, tuple[str, ...]] = {
+    "bancogeneral": ("banco general", "bancogeneral"),
+    "bncr": ("bncr", "banco nacional de costa rica"),
+    "bac": ("bac credomatic", "credomatic", "bac"),
 }
 
 SHORTENERS = {"bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "cutt.ly"}
@@ -33,8 +41,6 @@ INJECTION_PATTERNS = (
     r"ignore (all )?(previous|prior) instructions",
     r"marca este correo como (seguro|legitimo)",
 )
-
-_LEET = str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s"})
 
 
 def domain_of(address: str) -> str:
@@ -84,28 +90,76 @@ def _reply_to(msg: Message) -> list[Signal]:
     return []
 
 
-def _is_official(dom: str, official: set[str]) -> bool:
-    """Dominio oficial o subdominio suyo (mail.bancogeneral.com)."""
-    return any(dom == d or dom.endswith("." + d) for d in official)
+def _candidate_hosts(msg: Message) -> list[str]:
+    """Dominios que una persona veria: remitente, respuesta y enlaces."""
+    hosts = [domain_of(msg.sender)]
+    if msg.reply_to:
+        hosts.append(domain_of(msg.reply_to))
+    for link in msg.links:
+        hosts.append(
+            re.sub(r"^https?://", "", link.lower()).split("/")[0].split(":")[0]
+        )
+    return [h for h in hosts if h]
 
 
-def _mentions_brand(stem: str, brand: str) -> bool:
-    """Marcas cortas (bac, bncr) solo cuentan como palabra completa del dominio,
-    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte."""
-    tokens = re.split(r"[^a-z0-9]+", stem)
-    return brand in tokens or (len(brand) >= 8 and brand in stem)
+def _impersonation(msg: Message) -> list[Signal]:
+    """Dominios que imitan una marca, con o sin trucos de caracteres (homografos)."""
+    lookalike_dom: str | None = None
+    trick = False
+    mixed_dom: str | None = None
+    for dom in _candidate_hosts(msg):
+        ascii_dom = lookalike.to_ascii(dom)
+        stem = lookalike.fold(lookalike.to_unicode(dom))
+        for brand, official in BRANDS.items():
+            if lookalike.mentions_brand(stem, brand) and not lookalike.is_official(
+                ascii_dom, official
+            ):
+                lookalike_dom = lookalike_dom or ascii_dom
+                trick = trick or lookalike.uses_special_characters(dom)
+        if mixed_dom is None and lookalike.is_mixed_script(dom):
+            mixed_dom = ascii_dom
+    signals: list[Signal] = []
+    if lookalike_dom:
+        signals.append(
+            Signal(
+                code="lookalike_domain",
+                description=f"El dominio '{lookalike_dom}' imita a una marca conocida pero no es el oficial.",
+                weight=35,
+            )
+        )
+    if trick:
+        signals.append(
+            Signal(
+                code="homograph_domain",
+                description="Usa letras de otro alfabeto o con marcas especiales que se ven iguales a las normales para hacerse pasar por la marca.",
+                weight=30,
+            )
+        )
+    if mixed_dom:
+        signals.append(
+            Signal(
+                code="mixed_script_domain",
+                description=f"El dominio '{mixed_dom}' mezcla alfabetos distintos (por ejemplo latino y cirilico), una tecnica comun de suplantacion.",
+                weight=40,
+            )
+        )
+    return signals
 
 
-def _lookalike(msg: Message) -> list[Signal]:
-    dom = domain_of(msg.sender)
-    stem = dom.translate(_LEET)
-    for brand, official in BRANDS.items():
-        if _mentions_brand(stem, brand) and not _is_official(dom, official):
+def _display_name(msg: Message) -> list[Signal]:
+    """El nombre visible aparenta ser una marca, pero la direccion es de otro dominio."""
+    name, _ = parseaddr(msg.sender)
+    folded = lookalike.fold(name)
+    sender_ascii = lookalike.to_ascii(domain_of(msg.sender))
+    for brand, aliases in BRAND_NAMES.items():
+        if lookalike.mentions_brand_name(folded, aliases) and not lookalike.is_official(
+            sender_ascii, BRANDS[brand]
+        ):
             return [
                 Signal(
-                    code="lookalike_domain",
-                    description=f"El dominio '{dom}' imita a una marca conocida pero no es el oficial.",
-                    weight=35,
+                    code="display_name_brand",
+                    description="El nombre del remitente aparenta ser de una marca conocida, pero la direccion es de otro dominio.",
+                    weight=30,
                 )
             ]
     return []
@@ -153,6 +207,14 @@ def _injection(msg: Message) -> list[Signal]:
 
 def analyze(msg: Message) -> list[Signal]:
     signals: list[Signal] = []
-    for rule in (_auth, _reply_to, _lookalike, _links, _urgency, _injection):
+    for rule in (
+        _auth,
+        _reply_to,
+        _impersonation,
+        _display_name,
+        _links,
+        _urgency,
+        _injection,
+    ):
         signals.extend(rule(msg))
     return signals
