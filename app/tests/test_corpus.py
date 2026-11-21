@@ -13,7 +13,7 @@ from app.models import Message, Risk
 
 def test_corpus_has_expected_cases():
     cases = load_cases()
-    assert len(cases) == 48  # 30 originales + 18 de marcas
+    assert len(cases) == 62  # 30 originales + 18 de marcas + 14 de verificacion de dominios
     assert {c["label"] for c in cases} == {"phish", "legit"}
 
 
