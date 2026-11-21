@@ -1072,6 +1072,8 @@ function applyFilter() {
   renderSummary();
   renderCampaigns();
   renderFilters();
+  // En pantalla ancha el inspector no queda vacio: muestra el primer correo, como el prototipo
+  if (wide.matches && !selectedId) { const first = visibleAlerts()[0]; if (first) selectedId = first.id; }
   renderList();
   renderDetail();
 }
