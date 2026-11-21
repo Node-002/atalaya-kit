@@ -14,7 +14,7 @@
 | **Memoria acotada** | Evitar llenar el servicio gratuito | Máximo 200 copias, caducan a las 2 h; `/health` y estáticos no crean copia |
 | **API sin documentación abierta** | `/docs` y `/openapi.json` listaban las 21 rutas | Ahora `404` (solo con `ATALAYA_DOCS=1`) |
 | **Sin cabecera `Server`** | Revelaba el servidor | `--no-server-header` en la imagen; comprobado |
-| **`HEALTHCHECK` en el Dockerfile** | Lo marcó Trivy | Pendiente de construir la imagen (Docker no está instalado) |
+| **`HEALTHCHECK` en el Dockerfile** | Lo marcó Trivy | La imagen **ya compiló y arrancó en Render** con el `Dockerfile` anterior; esta línea nueva se probará en el próximo despliegue |
 | **Favicon y meta descripción** | Error 404 en consola y SEO 90 | Lighthouse: SEO 100, buenas prácticas 100 |
 | **Etiqueta de las tarjetas de buzón** | Lighthouse: el nombre accesible no coincidía con el texto visible | Accesibilidad 100 |
 | **Cabecera sin saltos** (espacio reservado del botón de rol) | Desplazamiento de diseño en el móvil | Escritorio CLS 0,003. **Móvil sigue en 0,177** (ver pendientes) |
@@ -48,7 +48,7 @@ Es el punto que más afecta al jurado: la nota de «demo real» (25 %) depende d
 ## 5. Lo que sigue pendiente (dicho con honestidad)
 1. **CLS móvil 0,177** (el umbral «bueno» es 0,1): un bloque (`main`) se desplaza al cargar los datos en pantalla de 412 px. Apliqué dos correcciones y no bastaron; falta localizar el elemento exacto. Escritorio está bien.
 2. **El CI nunca se ha ejecutado.** Se sabrá al subir la rama; si falla, lo corrijo.
-3. **La imagen Docker sigue sin construirse** (Docker no está instalado). El primer despliegue en Render lo probará.
+3. **Docker no está instalado en tu equipo y no hace falta.** Render ya construyó la imagen con el `Dockerfile` anterior (registro del 21 nov, 8:05) y la app arrancó. Los cambios nuevos del `Dockerfile` (`HEALTHCHECK` y `--no-server-header`) se comprobarán en el próximo despliegue; no es un error ni un bloqueo.
 4. **Semgrep y Nuclei** no se usaron: no están en winget y Semgrep funciona mejor en WSL.
 5. **ZAP se ejecutó con límites altos** a propósito; con los límites reales de la demo (20 visitas/min) un escáner agresivo recibirá `429`, que es lo deseado.
 6. Siguen abiertos los puntos del análisis por áreas que no se tocaron hoy: `LICENSE`, política de privacidad, dominios oficiales de las marcas sin verificar, pitch, diapositivas y video.
