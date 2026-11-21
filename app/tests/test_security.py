@@ -26,7 +26,7 @@ def test_static_files_contain_no_secrets_or_env_names():
         r"(ATALAYA_[A-Z_]+|sk-ant-|client_secret|GOCSPX|AIza|refresh_token|BEGIN [A-Z ]*PRIVATE KEY)"
     )
     for path in STATIC.rglob("*"):
-        if path.is_file():
+        if path.is_file() and path.suffix != ".woff2":  # las fuentes son binarias
             assert not suspicious.search(path.read_text(encoding="utf-8")), path.name
 
 
