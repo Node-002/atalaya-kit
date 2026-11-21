@@ -17,12 +17,29 @@ const ACTION_TEXT = {
 };
 const INVITE_TEXT = { pending: "Pendiente", used: "Usada", expired: "Vencida", revoked: "Revocada" };
 const GROUPS = [
-  { match: (a) => a.priority === 0, title: "Requieren tu decisión ahora", urgent: true },
-  { match: (a) => a.priority === 1, title: "Para revisar" },
-  { match: (a) => a.priority === 2, title: "En cuarentena (fuera de la bandeja)" },
-  { match: (a) => a.priority === 3, title: "Revisados (con tu decisión y su motivo)" },
-  { match: (a) => a.priority === 4, title: "Sin riesgo (Atalaya no vio nada sospechoso)" },
+  { key: "decidir", short: "Por decidir", match: (a) => a.priority === 0, title: "Requieren tu decisión ahora", urgent: true, collapsed: false },
+  { key: "revisar", short: "Para revisar", match: (a) => a.priority === 1, title: "Para revisar", collapsed: false },
+  { key: "cuarentena", short: "En cuarentena", match: (a) => a.priority === 2, title: "En cuarentena (fuera de la bandeja)", collapsed: true },
+  { key: "revisados", short: "Revisados", match: (a) => a.priority === 3, title: "Revisados (con tu decisión y su motivo)", collapsed: true },
+  { key: "sinriesgo", short: "Sin riesgo", match: (a) => a.priority === 4, title: "Sin riesgo (Atalaya no vio nada sospechoso)", collapsed: true },
 ];
+
+// --- Preferencias de la vista (solo del navegador; no son datos de correos) ---
+const UI_KEY = "atalaya-vista";
+function loadUi() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
+    return { collapsed: saved.collapsed || {}, filter: "all" };
+  } catch {
+    return { collapsed: {}, filter: "all" };
+  }
+}
+const ui = loadUi();
+function saveUi() {
+  try { localStorage.setItem(UI_KEY, JSON.stringify({ collapsed: ui.collapsed })); } catch { /* sin almacenamiento */ }
+}
+const cardOpen = new Map(); // id de alerta -> abierta o cerrada (se conserva al refrescar)
+let lastAlerts = [];
 
 const alertsEl = document.getElementById("alertas");
 const msgEl = document.getElementById("mensaje");
@@ -94,15 +111,18 @@ function actionLabel(action) {
 
 // --- Alertas ------------------------------------------------------------------------------
 function renderAlert(alert) {
-  const card = el("article", "card " + alert.risk);
-  card.appendChild(el("h3", "", "Correo de " + alert.sender_domain));
-  const meta = "Recibido: " + formatDate(alert.received_at) + (multiple && alert.mailbox_label ? " · Buzón: " + alert.mailbox_label : "");
-  card.appendChild(el("p", "hora", meta));
-
-  const badges = el("div", "badges");
-  badges.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
-  badges.appendChild(el("span", "badge estado", statusText(alert)));
-  card.appendChild(badges);
+  const card = el("details", "card " + alert.risk);
+  card.open = cardOpen.has(alert.id) ? cardOpen.get(alert.id) : alert.priority === 0;
+  card.addEventListener("toggle", () => cardOpen.set(alert.id, card.open));
+  const fila = el("summary", "fila");
+  fila.appendChild(el("span", "dominio", alert.sender_domain));
+  fila.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
+  fila.appendChild(el("span", "badge estado", statusText(alert)));
+  const meta = formatDate(alert.received_at) + (multiple && alert.mailbox_label ? " · " + alert.mailbox_label : "");
+  fila.appendChild(el("span", "muted meta", meta));
+  card.appendChild(fila);
+  const body = el("div", "detalle");
+  card.appendChild(body);
 
   if (alert.explanation_source !== "rules") {
     const resumen = el("p", "resumen-ia");
@@ -110,18 +130,18 @@ function renderAlert(alert) {
       el("span", "tag", alert.explanation_source === "ai" ? "Resumen con IA" : "Resumen simulado (sin IA real)"),
     );
     resumen.appendChild(document.createTextNode(" " + alert.explanation.replace(/^Resumen simulado:\s*/, "")));
-    card.appendChild(resumen);
+    body.appendChild(resumen);
   }
 
-  card.appendChild(el("p", "porque", alert.risk === "low" ? "Todo parece normal." : "Por qué desconfiamos:"));
+  body.appendChild(el("p", "porque", alert.risk === "low" ? "Todo parece normal." : "Por qué desconfiamos:"));
   if (alert.signals.length) {
     const ul = el("ul", "signals");
     alert.signals.forEach((s) => ul.appendChild(el("li", "", s.description)));
-    card.appendChild(ul);
+    body.appendChild(ul);
   }
 
   if (alert.status === "quarantined") {
-    card.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja y te pide el motivo."));
+    body.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja y te pide el motivo."));
   }
 
   const actions = el("div", "actions");
@@ -153,7 +173,7 @@ function renderAlert(alert) {
   download.href = reportUrl + "?download=true";
   download.setAttribute("download", "");
   actions.appendChild(download);
-  card.appendChild(actions);
+  body.appendChild(actions);
 
   if (alert.actions.length) {
     const ul = el("ul", "linea");
@@ -166,7 +186,7 @@ function renderAlert(alert) {
       if (a.reason) li.appendChild(el("div", "motivo", "Motivo: " + a.reason));
       ul.appendChild(li);
     });
-    card.appendChild(ul);
+    body.appendChild(ul);
   }
   return card;
 }
@@ -331,6 +351,33 @@ async function load() {
   const query = filtroEl.value ? "?mailbox_id=" + encodeURIComponent(filtroEl.value) : "";
   const alerts = await api("/api/alerts" + query);
 
+  lastAlerts = alerts;
+  render();
+}
+
+function renderChips() {
+  const chips = document.getElementById("chips");
+  chips.replaceChildren();
+  const make = (key, text, urgent) => {
+    const b = button(text, "chip" + (urgent ? " urgente" : ""), () => {
+      ui.filter = ui.filter === key ? "all" : key;
+      render();
+      if (ui.filter !== "all") document.getElementById("alertas").scrollIntoView({ block: "start" });
+    });
+    b.setAttribute("aria-pressed", String(ui.filter === key));
+    chips.appendChild(b);
+  };
+  make("all", "Todos (" + lastAlerts.length + ")", false);
+  GROUPS.forEach((g) => {
+    const n = lastAlerts.filter((a) => g.match(a)).length;
+    if (n) make(g.key, g.short + " " + n, g.urgent);
+  });
+  document.getElementById("controles").hidden = lastAlerts.length === 0;
+}
+
+function render() {
+  const alerts = lastAlerts;
+  renderChips();
   const pendientes = alerts.filter((a) => a.priority <= 1).length;
   const nodes = [
     pendientes
@@ -340,13 +387,45 @@ async function load() {
   GROUPS.forEach((g) => {
     const items = alerts.filter((a) => g.match(a));
     if (!items.length) return;
-    const h = el("h3", "grupo" + (g.urgent ? " urgente" : ""), g.title + " ");
-    h.appendChild(el("span", "n", "(" + items.length + ")"));
-    nodes.push(h, ...items.map(renderAlert));
+    if (ui.filter !== "all" && ui.filter !== g.key) return;
+    const isCollapsed = ui.filter === g.key ? false : (g.key in ui.collapsed ? ui.collapsed[g.key] : g.collapsed);
+    const section = el("section", "grupo-sec");
+    section.id = "grupo-" + g.key;
+    const h = el("h3", "grupo" + (g.urgent ? " urgente" : ""));
+    const body = el("div", "grupo-cuerpo");
+    body.hidden = isCollapsed;
+    const toggle = button("", "grupo-btn", () => {
+      const nowCollapsed = !body.hidden;
+      body.hidden = nowCollapsed;
+      ui.collapsed[g.key] = nowCollapsed;
+      toggle.setAttribute("aria-expanded", String(!nowCollapsed));
+      chev.textContent = nowCollapsed ? "▸" : "▾";
+      saveUi();
+    });
+    const chev = el("span", "chev", isCollapsed ? "▸" : "▾");
+    toggle.setAttribute("aria-expanded", String(!isCollapsed));
+    toggle.setAttribute("aria-controls", section.id + "-cuerpo");
+    body.id = section.id + "-cuerpo";
+    toggle.append(chev, document.createTextNode(" " + g.title + " "), el("span", "n", "(" + items.length + ")"));
+    h.appendChild(toggle);
+    items.forEach((a) => body.appendChild(renderAlert(a)));
+    section.append(h, body);
+    nodes.push(section);
   });
   alertsEl.replaceChildren(...nodes);
   if (!alerts.length) alertsEl.appendChild(el("p", "", "No hay correos por revisar."));
 }
+
+document.getElementById("expandir").addEventListener("click", () => {
+  lastAlerts.forEach((a) => cardOpen.set(a.id, true));
+  GROUPS.forEach((g) => { ui.collapsed[g.key] = false; });
+  saveUi();
+  render();
+});
+document.getElementById("contraer").addEventListener("click", () => {
+  lastAlerts.forEach((a) => cardOpen.set(a.id, false));
+  render();
+});
 
 // --- Invitaciones --------------------------------------------------------------------------
 const dlg = document.getElementById("dlg-invitar");
