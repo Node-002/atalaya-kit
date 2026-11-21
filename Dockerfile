@@ -23,4 +23,4 @@ EXPOSE 8000
 
 # ATALAYA_MODE=demo se fuerza al arrancar: aunque la plataforma tenga otro valor, el
 # despliegue publico nunca usa modo gmail. --proxy-headers para HTTPS detras del proxy.
-CMD ["sh", "-c", "ATALAYA_MODE=demo exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "ATALAYA_MODE=demo exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --no-server-header --forwarded-allow-ips='*'"]

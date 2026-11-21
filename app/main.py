@@ -188,7 +188,15 @@ def create_app(
         if task:
             task.cancel()
 
-    app = FastAPI(title="Atalaya", version="0.2.0", lifespan=lifespan)
+    docs_on = os.environ.get("ATALAYA_DOCS") == "1"  # lista de rutas: solo si se pide a proposito
+    app = FastAPI(
+        title="Atalaya",
+        version="0.2.0",
+        lifespan=lifespan,
+        docs_url="/docs" if docs_on else None,
+        redoc_url=None,
+        openapi_url="/openapi.json" if docs_on else None,
+    )
 
     def role_of(request: Request) -> str:
         """admin o supervisor. En la demo (sin cuentas) se elige con una cookie."""
@@ -514,4 +522,10 @@ def create_app(
     return app
 
 
-app = create_app()
+# Demo publica: una copia por visitante (ver app/demo_sessions.py). El modo gmail es una sola app.
+if os.environ.get("ATALAYA_MODE", "demo") == "demo":
+    from app.demo_sessions import DemoSessions
+
+    app = DemoSessions(create_app)
+else:
+    app = create_app()
