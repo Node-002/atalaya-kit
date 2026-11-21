@@ -28,6 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app import campaigns, logsafe
+from app.decision import HIGH_AT, MEDIUM_AT
 from app.admin import AdminAuth, build_admin_router
 from app.alerts import SecurityNotifier, SmtpConfig
 from app.auth import AuthContext, build_router, revoke_google_token
@@ -492,6 +493,11 @@ def create_app(
     @app.get("/api/whoami")
     def whoami(request: Request) -> dict:
         return {"role": role_of(request), "demo_roles": admin is None and mode == "demo"}
+
+    @app.get("/api/policy")
+    def policy() -> dict:
+        """Como se calcula el riesgo. Solo lectura: los umbrales no se editan desde la web."""
+        return {"medium": MEDIUM_AT, "high": HIGH_AT}
 
     @app.post("/api/demo/role")
     def demo_role(body: DemoRoleIn) -> JSONResponse:
