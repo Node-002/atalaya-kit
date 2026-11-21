@@ -107,6 +107,57 @@ def test_panel_exposes_roles_and_demo_banner_markup():
     html = _text("index.html")
     assert 'id="banner"' in html and "Demostración con datos simulados" in html
     assert 'id="banner-rol"' in html and "solo lectura" in html
-    assert 'id="btn-rol"' in html
-    for pane in ("panel", "buzones", "historial", "politica"):
+    assert 'id="rol-select"' in html and 'id="rol-caja"' in html
+    for pane in ("panel", "analitica", "buzones", "historial", "politica"):
         assert f'id="vista-{pane}"' in html
+
+
+def test_fonts_are_self_hosted_with_swap_and_metric_fallbacks():
+    css = _text("style.css")
+    for fam in ("inter", "jetbrains-mono"):
+        for sub in ("latin", "latin-ext"):
+            for w in (400, 500, 600, 700):
+                assert (STATIC / "fonts" / f"{fam}-{sub}-{w}-normal.woff2").exists()
+    assert css.count("font-display: swap") == 16
+    assert "size-adjust" in css and "ascent-override" in css
+    assert "googleapis" not in css and "gstatic" not in css
+    for page in ("index.html", "login.html", "invite.html", "connected.html"):
+        html = _text(page)
+        assert re.search(
+            r'<link rel="preload" as="font" type="font/woff2" href="/static/fonts/[^"]+" crossorigin>',
+            html,
+        ), page
+        assert "fonts.googleapis" not in html
+    notice = _text("fonts/NOTICE.txt")
+    assert "SIL OFL" in notice and (STATIC / "fonts" / "LICENSE-inter.txt").exists()
+    assert (STATIC / "fonts" / "LICENSE-jetbrains-mono.txt").exists()
+
+
+def test_panel_has_the_prototype_sections_and_only_real_numbers():
+    html = _text("index.html")
+    for label in (
+        "Panel de Control",
+        "Analítica y Tráfico",
+        "Usuarios Conectados",
+        "Historial de Amenazas",
+        "Configuración de Auditoría",
+    ):
+        assert label in html
+    for placeholder in (
+        "Buscar empleado o remitente…",
+        "Análisis Forense",
+        "Cabeceras SMTP",
+        "Copiar IoC",
+    ):
+        assert placeholder in html or placeholder in _text("app.js")
+    for invented in (
+        "99,4",
+        "99.4",
+        "412 correos",
+        "184 ms",
+        "18.492",
+        "SOC v3.0",
+        "TLP:AMBER",
+        "Sentinel",
+    ):
+        assert invented not in html and invented not in _text("app.js")
