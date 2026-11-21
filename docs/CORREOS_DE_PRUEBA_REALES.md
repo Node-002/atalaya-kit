@@ -137,3 +137,45 @@ Cambiamos nuestra cuenta bancaria. Por favor depositen a los nuevos datos.
 
 ## Nota sobre A3
 La «a» de `bаncogeneral` es la letra **cirílica** (U+0430), que se ve igual a la latina. Si la escribís con el teclado normal, saldrá como un dominio parecido pero sin el truco de alfabeto. **Copiá y pegá** el texto del documento.
+
+---
+
+## Correos basados en ejemplos de phishing de la Universidad de York
+
+Fuente de inspiración: *Examples of phishing scam emails*, IT Services, University of York (https://support.york.ac.uk/s/article/phishing-examples). Se tomó solo el **patrón** de cada ejemplo (alerta de inicio de sesión sospechoso de «Google» y pago fallido de «Netflix»: remitente parecido a la marca, lenguaje alarmante, enlace para iniciar sesión o pagar). **El texto es original**, no copiado de la página.
+Los dominios `.example` no existen. **No hagas clic** en ningún enlace. Enviarlos desde tu cuenta personal a la cuenta de prueba.
+
+### G1 — Alerta de inicio de sesión sospechoso (patrón «Google» de York)
+- **Asunto:** `Alerta de seguridad: inicio de sesión sospechoso en su cuenta`
+- **Texto:**
+
+```
+Hemos detectado un inicio de sesión sospechoso en su cuenta desde un dispositivo desconocido. Para evitar el bloqueo, confirme su identidad de inmediato en http://google-verificacion-cuenta.example/acceso o en http://bit.ly/ejemplo-google. Si no lo hace en 24 horas, su cuenta será suspendida.
+```
+- **Esperado:** riesgo **MEDIO** (35 puntos) → grupo «Para revisar».
+- **Probá:** Debe quedar en «Para revisar». Es el patrón más común contra usuarios de Gmail.
+
+### N1 — Pago fallido (patrón «Netflix» de York)
+- **Asunto:** `No pudimos procesar su pago`
+- **Texto:**
+
+```
+No pudimos procesar su último pago. Actualice su método de pago ahora mismo en http://bit.ly/ejemplo-pago para no perder el servicio.
+```
+- **Esperado:** riesgo **MEDIO** (35 puntos) → grupo «Para revisar».
+- **Probá:** Debe quedar en «Para revisar».
+
+### G2 — Misma idea, sin urgencia ni enlace acortado (Atalaya NO lo detecta)
+- **Asunto:** `Revisión de actividad reciente`
+- **Texto:**
+
+```
+Revisamos actividad reciente en su cuenta de Google. Puede revisarla aquí: http://seguridad-cuenta-google.example/revisar
+```
+- **Esperado:** riesgo **BAJO** (0 puntos) → grupo «Sin riesgo».
+- **Probá:** Debe quedar en «Sin riesgo»: es una limitación real (ver nota). Probá aislarlo a mano con motivo.
+
+### Qué NO cubre esto todavía (hallazgo honesto)
+- **El remitente falso con dirección parecida a la marca** (la pista principal del ejemplo de York: una dirección como `googleacc` con la marca mal escrita) **solo se detecta si la marca está en la lista de Atalaya**, y hoy esa lista tiene **3 bancos** (Banco General, BNCR y BAC). Google, Microsoft, Netflix, Dropbox o PayPal **no están**.
+- Desde tu Gmail no se puede falsificar el remitente, así que esta prueba no lo ejercita; solo se ve en el código y en las pruebas.
+- Mejora propuesta: ampliar la lista a las marcas más suplantadas y detectar **errores de escritura de la marca** (p. ej. «Goggle»).
