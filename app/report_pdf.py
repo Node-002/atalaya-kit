@@ -55,6 +55,9 @@ RISK_COLOR = {
     "low": colors.HexColor("#067647"),
 }
 
+# Ancho util: la pagina menos margenes (0,75") y el relleno de 6 pt que ReportLab pone al marco.
+FRAME_W = letter[0] - 1.5 * inch - 12
+
 # Tope de filas por tabla: con 200 buzones el informe sigue siendo legible y de tamano razonable.
 MAX_MAILBOXES = 60
 MAX_DECISIONS = 100
@@ -122,6 +125,7 @@ H2 = _style(
     textColor=ACCENT,
     spaceBefore=14,
     spaceAfter=5,
+    keepWithNext=1,
 )
 CELL = _style("cell", fontSize=8.4, leading=10.6, spaceAfter=0)
 CELLB = _style(
@@ -134,6 +138,16 @@ CELLH = _style(
     leading=10.6,
     textColor=colors.white,
     spaceAfter=0,
+)
+CELLR = _style("cellr", fontSize=8.4, leading=10.6, spaceAfter=0, alignment=2)
+CELLHR = _style(
+    "cellhr",
+    fontName="Helvetica-Bold",
+    fontSize=8.4,
+    leading=10.6,
+    textColor=colors.white,
+    spaceAfter=0,
+    alignment=2,
 )
 KPI_N = _style(
     "kpin",
@@ -280,11 +294,19 @@ def _table(
     return t
 
 
+def _count_cell(n: int, alert_if_positive: bool) -> Paragraph:
+    """Cifra alineada a la derecha; en rojo (y negrita) solo si es riesgo que exige atencion."""
+    if alert_if_positive and n:
+        color = RISK_COLOR["high"].hexval().replace("0x", "#")
+        return Paragraph(f'<font color="{color}"><b>{int(n)}</b></font>', CELLR)
+    return Paragraph(str(int(n)), CELLR)
+
+
 def _kpis(items: list[tuple[str, int, colors.Color | None]]) -> Table:
     cells = [
         [
             Paragraph(
-                f'<font color="{(color or INK).hexval().replace("0x", "#")}">{n}</font>',
+                f'<font color="{(color if n and color else INK).hexval().replace("0x", "#")}">{n}</font>',
                 KPI_N,
             ),
             Paragraph(_safe(label), KPI_L),
@@ -292,7 +314,7 @@ def _kpis(items: list[tuple[str, int, colors.Color | None]]) -> Table:
         for label, n, color in items
     ]
     cols = [list(c) for c in zip(*cells, strict=True)]
-    w = (letter[0] - 1.5 * inch) / len(items)
+    w = (FRAME_W) / len(items)
     t = Table(cols, colWidths=[w] * len(items))
     t.setStyle(
         TableStyle(
@@ -310,24 +332,34 @@ def _kpis(items: list[tuple[str, int, colors.Color | None]]) -> Table:
 
 
 def _signature_block() -> KeepTogether:
-    w = letter[0] - 1.5 * inch
-    line = _style("sig", fontSize=8.5, textColor=MUTED, spaceAfter=0)
+    """Cuatro campos: la linea para escribir y, debajo, su etiqueta."""
+    w = FRAME_W
+    gap = 24
+    col = (w - gap) / 2
+    label = _style("sig", fontSize=8, textColor=MUTED, spaceAfter=0)
+    blank = Spacer(1, 26)
     rows = [
-        [Paragraph("Revisado por", line), Paragraph("Cargo", line)],
-        [Paragraph("&nbsp;", BODY), Paragraph("&nbsp;", BODY)],
-        [Paragraph("Fecha", line), Paragraph("Firma", line)],
-        [Paragraph("&nbsp;", BODY), Paragraph("&nbsp;", BODY)],
+        [blank, "", blank],
+        [
+            Paragraph("Revisado por (nombre y cargo)", label),
+            "",
+            Paragraph("Firma", label),
+        ],
+        [blank, "", blank],
+        [Paragraph("Fecha", label), "", Paragraph("Observaciones", label)],
     ]
-    t = Table(rows, colWidths=[w / 2 - 8, w / 2 - 8], hAlign="LEFT")
+    t = Table(rows, colWidths=[col, gap, col], hAlign="LEFT")
     t.setStyle(
         TableStyle(
             [
-                ("LINEBELOW", (0, 1), (-1, 1), 0.6, INK),
-                ("LINEBELOW", (0, 3), (-1, 3), 0.6, INK),
+                ("LINEBELOW", (0, 0), (0, 0), 0.6, INK),
+                ("LINEBELOW", (2, 0), (2, 0), 0.6, INK),
+                ("LINEBELOW", (0, 2), (0, 2), 0.6, INK),
+                ("LINEBELOW", (2, 2), (2, 2), 0.6, INK),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("TOPPADDING", (0, 0), (-1, -1), 2),
-                ("BOTTOMPADDING", (0, 1), (-1, 1), 10),
-                ("BOTTOMPADDING", (0, 3), (-1, 3), 10),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ]
         )
     )
@@ -377,7 +409,7 @@ def _reason(action) -> str:
 def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     now = datetime.now(UTC)
     score = sum(s.weight for s in alert.signals)
-    w = letter[0] - 1.5 * inch
+    w = FRAME_W
     story: list = [
         p("Informe de revisión de un correo", TITLE),
         p(org_name, SUBTITLE),
@@ -403,12 +435,12 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
             [
                 [
                     p("Riesgo", CELLH),
-                    p("Puntos", CELLH),
+                    p("Puntos", CELLHR),
                     p("Origen del resumen", CELLH),
                 ],
                 [
                     _risk_chip(alert.risk.value),
-                    p(score, CELL),
+                    p(score, CELLR),
                     p(
                         SOURCE_TEXT.get(
                             alert.explanation_source, alert.explanation_source
@@ -423,8 +455,8 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     story.append(Spacer(1, 6))
     story.append(p(" ".join(alert.explanation.split()), BODY))
     if alert.signals:
-        rows = [[p("Señal detectada", CELLH), p("Puntos", CELLH)]]
-        rows += [[p(s.description, CELL), p(s.weight, CELL)] for s in alert.signals]
+        rows = [[p("Señal detectada", CELLH), p("Puntos", CELLHR)]]
+        rows += [[p(s.description, CELL), p(s.weight, CELLR)] for s in alert.signals]
         story.append(_table(rows, [w * 0.86, w * 0.14]))
     else:
         story.append(p("No se detectó ninguna señal de riesgo.", BODY))
@@ -469,7 +501,7 @@ def build_org_pdf(
     generated_by: str = "",
 ) -> bytes:
     now = datetime.now(UTC)
-    w = letter[0] - 1.5 * inch
+    w = FRAME_W
     risks = Counter(a.risk.value for a in alerts)
     quarantined = sum(a.status is Status.quarantined for a in alerts)
     pending = sum(a.status is Status.pending_approval for a in alerts)
@@ -524,14 +556,16 @@ def build_org_pdf(
         )
         rows = [
             [
-                p(h, CELLH)
-                for h in (
-                    "Buzón",
-                    "Correos",
-                    "Alto",
-                    "Medio",
-                    "En cuarentena",
-                    "Esperan decisión",
+                p(h, CELLH if i == 0 else CELLHR)
+                for i, h in enumerate(
+                    (
+                        "Buzón",
+                        "Correos",
+                        "Alto",
+                        "Medio",
+                        "En cuarentena",
+                        "Esperan decisión",
+                    )
                 )
             ]
         ]
@@ -540,7 +574,7 @@ def build_org_pdf(
             rows.append(
                 [p(boxes[b], CELL)]
                 + [
-                    p(c[k], CELL)
+                    _count_cell(c[k], k in ("high", "pending"))
                     for k in ("total", "high", "medium", "quarantined", "pending")
                 ]
             )
@@ -614,7 +648,7 @@ def build_org_pdf(
                     p(_reason(x), CELL),
                 ]
             )
-        story.append(_table(rows, [w * 0.15, w * 0.13, w * 0.24, w * 0.22, w * 0.26]))
+        story.append(_table(rows, [w * 0.13, w * 0.12, w * 0.30, w * 0.20, w * 0.25]))
         if len(decisions) > MAX_DECISIONS:
             story.append(
                 p(
