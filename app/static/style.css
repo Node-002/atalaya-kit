@@ -225,3 +225,12 @@ input[type="search"] { font: inherit; padding: 8px 10px; border-radius: 6px; bor
 .chk { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
 .filtro-activo { margin: 8px 0; padding: 8px 12px; border-radius: 8px; background: #12202f; border: 1px solid #1f4068; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 #resumen-buscar { margin: 12px 0 0; }
+
+/* Evita que el pie salte cuando llegan los datos (desplazamiento de diseno) */
+main { min-height: 75vh; }
+/* Reserva el sitio del boton de rol mientras se carga, para que la cabecera no salte */
+body:not(.listo) #btn-rol[hidden] { display: inline-flex; visibility: hidden; }
+body:not(.listo) #btn-rol[hidden]::before { content: "Ver como supervisor"; }
+/* La insignia de pendientes ocupa su sitio aunque aun no tenga numero (las pestanas no saltan) */
+.tab-n { min-width: 1.6em; text-align: center; }
+.tab-n[hidden] { display: inline-block; visibility: hidden; }

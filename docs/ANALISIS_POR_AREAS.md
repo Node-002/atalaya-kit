@@ -8,6 +8,9 @@ Se sigue el mismo principio de las listas de endurecimiento del Departamento de 
 - Los puntos de cada área son del mismo peso entre sí. Un fallo pequeño y uno grave cuentan igual; por eso al final están los hallazgos **ordenados por gravedad**.
 - Todo lo marcado «verificado» se comprobó hoy con comandos. Lo que no se pudo probar está marcado así.
 
+
+> **Actualización del 21 nov (tras el endurecimiento):** global **~65 %**. Seguridad 90 % (demo sin `/docs`, con límites de uso y sin cabecera `Server`), código 77 % (dependencias fijadas y CI creado, aún sin ejecutarse), experiencia 75 % (una copia de la demo por visitante y Lighthouse 100 de accesibilidad), entrega 54 % (README veraz). Despliegue, privacidad y detección no cambiaron. Detalle y evidencias en `docs/INFORME_ENDURECIMIENTO_21_NOV.md`. Las tablas de abajo son las del análisis inicial.
+
 ## Resultado global: **60 %**
 ```
 Seguridad            ████████████████░░░░  80 %   (16 / 20)

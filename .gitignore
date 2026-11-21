@@ -34,3 +34,6 @@ build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Registros de despliegue y logs locales
+*.log

@@ -488,7 +488,7 @@ function renderSummary() {
     const ok = c.status === "connected";
     const card = el("button", "cbuzon" + (ok ? "" : " sin-cobertura"));
     card.type = "button";
-    card.setAttribute("aria-label", "Ver los correos de " + c.label);
+    card.title = "Ver los correos de " + c.label;
     card.addEventListener("click", () => focusMailbox(c.mailbox_id));
     const top = el("div", "cb-top");
     top.appendChild(el("strong", "", c.label));
@@ -738,6 +738,7 @@ async function init() {
       window.location.reload();
     });
   }
+  document.body.classList.add("listo"); // ya se sabe si hay boton de rol: se libera el espacio reservado
   await load();
   document.body.classList.add("animar"); // entrada suave solo al abrir, no en cada refresco
   setTimeout(() => document.body.classList.remove("animar"), 1200);

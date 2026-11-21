@@ -21,6 +21,9 @@ USER atalaya
 ENV PORT=8000
 EXPOSE 8000
 
+# Comprobacion de salud de la propia imagen (usa solo la biblioteca estandar).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD python -c "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4)"
+
 # ATALAYA_MODE=demo se fuerza al arrancar: aunque la plataforma tenga otro valor, el
 # despliegue publico nunca usa modo gmail. --proxy-headers para HTTPS detras del proxy.
 CMD ["sh", "-c", "ATALAYA_MODE=demo exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --no-server-header --forwarded-allow-ips='*'"]
