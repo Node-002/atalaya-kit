@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Atalaya">
+  <rect width="64" height="64" rx="14" fill="#0d1117"/>
+  <path d="M32 8 12 16v14c0 12 8.4 22.4 20 26 11.6-3.6 20-14 20-26V16L32 8Z" fill="#12202f" stroke="#58a6ff" stroke-width="3"/>
+  <circle cx="32" cy="30" r="7" fill="none" stroke="#58a6ff" stroke-width="3"/>
+  <circle cx="32" cy="30" r="2.5" fill="#58a6ff"/>
+</svg>
