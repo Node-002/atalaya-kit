@@ -13,3 +13,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Las dependencias se fijaron y probaron con Python 3.12: no subir de version mayor ni menor
+      # de Python sin probar todo a proposito (si hace falta, se hace a mano).
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
