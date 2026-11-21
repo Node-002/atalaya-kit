@@ -5,21 +5,29 @@ on:
     branches: [hackathon/mvp, main]
   pull_request:
 
-permissions:
-  contents: read
-  pull-requests: read # gitleaks-action lista los commits de la PR
+# Permisos minimos por defecto; cada trabajo declara los suyos.
+permissions: {}
+
+# Una subida nueva a la misma rama cancela la ejecucion anterior que sigue en curso.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   pruebas:
     name: Pruebas, estilo y seguridad
     runs-on: ubuntu-latest
     timeout-minutes: 15  # un trabajo colgado no gasta minutos sin limite
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lista los commits de la PR
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # gitleaks revisa todo el historial
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
           cache: pip
@@ -32,7 +40,7 @@ jobs:
         run: ruff check .
 
       - name: Pruebas con cobertura (pytest)
-        run: pytest -q --cov=app --cov-report=term
+        run: pytest -q --cov=app --cov-report=term --cov-fail-under=90
 
       - name: Analisis estatico de seguridad (bandit)
         run: bandit -q -r app -x app/tests
@@ -41,6 +49,50 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: Secretos en el historial (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  imagen:
+    name: Imagen Docker (construir, probar y escanear)
+    needs: pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Construir la imagen
+        run: docker build -t atalaya:ci .
+
+      - name: Tamano y capas de la imagen (resumen)
+        run: |
+          {
+            echo "### Imagen atalaya:ci"
+            echo
+            echo "Tamano: **$(docker image inspect atalaya:ci --format '{{.Size}}' | awk '{printf "%.1f MB", $1/1000000}')**"
+            echo
+            echo '<details><summary>docker history</summary>'
+            echo
+            echo '```'
+            docker history --format 'table {{.Size}}\t{{.CreatedBy}}' atalaya:ci
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Probar el contenedor (modo demo, usuario no root, salud, cabeceras)
+        run: .github/scripts/check-image.sh atalaya:ci
+
+      - name: Escaneo de vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: atalaya:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+          vuln-type: os,library
