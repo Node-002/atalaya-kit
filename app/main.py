@@ -10,6 +10,7 @@ import asyncio
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -49,6 +50,7 @@ POLL_SECONDS = int(os.environ.get("ATALAYA_POLL_SECONDS", "60"))
 STATIC_DIR = Path(__file__).parent / "static"
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 DEMO_ROLE_COOKIE = "atalaya_demo_role"
+_PDF_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="pdf")
 
 
 class DecisionIn(BaseModel):
@@ -376,6 +378,13 @@ def create_app(
     def legit(alert_id: str, request: Request, body: DecisionIn | None = None) -> Alert:
         return _act(store.mark_legit, alert_id, request, "alert_legit", body)
 
+    async def _build_pdf(fn, *args, **kwargs) -> bytes:
+        # ReportLab es Python puro (retiene el GIL): con 40 hilos a la vez el bucle de eventos se
+        # queda sin turno (`/health` tardaba 3 s con 100 PDF). Un grupo propio de 2 hilos acota eso.
+        return await asyncio.get_running_loop().run_in_executor(
+            _PDF_POOL, lambda: fn(*args, **kwargs)
+        )
+
     def _pdf_response(data: bytes, filename: str, download: bool) -> Response:
         disposition = "attachment" if download else "inline"
         return Response(
@@ -388,13 +397,15 @@ def create_app(
         )
 
     @app.get("/api/alerts/{alert_id}/report")
-    def alert_report(
+    async def alert_report(
         alert_id: str, download: bool = False, formato: Literal["txt", "pdf"] = "txt"
     ) -> Response:
         alert = _alert_or_404(alert_id)
         if formato == "pdf":
             return _pdf_response(
-                build_alert_pdf(alert, org_name), f"informe-{alert.id}.pdf", download
+                await _build_pdf(build_alert_pdf, alert, org_name),
+                f"informe-{alert.id}.pdf",
+                download,
             )
         disposition = "attachment" if download else "inline"
         return PlainTextResponse(
@@ -505,13 +516,14 @@ def create_app(
         return response
 
     @app.get("/api/org-report")
-    def org_report(
+    async def org_report(
         request: Request, download: bool = False, formato: Literal["txt", "pdf"] = "txt"
     ) -> Response:
         if formato == "pdf":
             alerts = store.list()
             return _pdf_response(
-                build_org_pdf(
+                await _build_pdf(
+                    build_org_pdf,
                     org_name,
                     alerts,
                     registry.list_audit(200),
