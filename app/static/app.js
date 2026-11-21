@@ -690,6 +690,8 @@ async function init() {
     });
   }
   await load();
+  document.body.classList.add("animar"); // entrada suave solo al abrir, no en cada refresco
+  setTimeout(() => document.body.classList.remove("animar"), 1200);
 }
 
 init().catch((err) => { msgEl.textContent = err.message; });
