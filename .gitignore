@@ -42,3 +42,6 @@ Thumbs.db
 .claude/worktrees/
 .claude/settings.local.json
 .claude/memory/
+
+# Kit autoalojado: archivo de variables y JSON del cliente de Google (los .env.* ya estan ignorados)
+!.env.kit.example

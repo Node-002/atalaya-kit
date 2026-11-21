@@ -1,0 +1,11 @@
+# Proxy inverso con HTTPS automatico (Let's Encrypt) para el kit de Atalaya.
+# 1) Cambia CAMBIAR_DOMINIO por tu dominio (ej. atalaya.tuorganizacion.org). Debe apuntar (registro A/AAAA)
+#    a este servidor y los puertos 80 y 443 deben estar abiertos.
+# 2) Arranca con:  docker compose --profile tls up -d --build
+# 3) En .env.kit deja  ATALAYA_TRUST_PROXY=1  (Caddy reescribe X-Forwarded-For con la IP real del cliente
+#    y Atalaya toma la ULTIMA entrada). Sin Caddy delante, ponlo en 0.
+CAMBIAR_DOMINIO {
+	encode zstd gzip
+	header -Server
+	reverse_proxy atalaya:8000
+}
