@@ -7,6 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /srv
 
+# Parches de seguridad del sistema base: la imagen python:3.12-slim puede traer paquetes de Debian
+# con una correccion ya publicada (el escaneo de Trivy del CI lo detecto con zlib1g).
+# hadolint ignore=DL3008,DL3009
+RUN apt-get update     && apt-get upgrade -y --no-install-recommends     && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
