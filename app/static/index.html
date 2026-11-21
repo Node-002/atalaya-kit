@@ -4,116 +4,344 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Atalaya vigila el correo de tu organización, explica por qué desconfía de un mensaje y solo lo aísla con tu aprobación.">
+  <meta name="theme-color" content="#07090E">
   <title>Atalaya — el agente que vigila tu correo</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preload" as="font" type="font/woff2" href="/static/fonts/inter-latin-400-normal.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/static/fonts/inter-latin-500-normal.woff2" crossorigin>
+  <link rel="preload" as="font" type="font/woff2" href="/static/fonts/jetbrains-mono-latin-500-normal.woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body data-vista="panel">
   <a class="skip" href="#contenido">Saltar al contenido</a>
   <p id="mensaje" class="mensaje toast" role="status" aria-live="polite"></p>
 
-  <header class="top">
-    <h1>Atalaya <span>vigila tu correo</span></h1>
-    <div class="top-estado">
-      <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
-      <span id="yo" class="muted" hidden></span>
-    </div>
-    <div class="top-actions">
-      <button id="btn-rol" type="button" class="btn btn-ghost reserva">Ver como supervisor</button>
-      <button id="btn-invitar" type="button" class="btn btn-primary">Invitar buzón</button>
-      <button id="btn-salir" type="button" class="btn btn-ghost" hidden>Salir</button>
-    </div>
-  </header>
+  <div class="app">
+    <div id="velo" class="velo" aria-hidden="true"></div>
 
-  <div id="banner" class="demo-banner" role="note">
-    <strong>Demostración con datos simulados.</strong>
-    No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
-    <button id="guia-abrir" type="button" class="link-btn">Ver guía de 3 pasos</button>
-  </div>
+    <!-- Columna izquierda: marca, menú y tarjeta de la persona -->
+    <aside id="menu" class="menu" aria-label="Menú principal">
+      <div class="menu-arriba">
+        <div class="marca">
+          <svg class="marca-torre" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-torre"/></svg>
+          <div class="marca-txt">
+            <svg class="marca-rotulo" role="img" aria-label="Atalaya" focusable="false"><use href="/static/icons/sprite.svg#i-rotulo"/></svg>
+            <p class="marca-lema">El agente que vigila tu correo</p>
+          </div>
+          <button id="menu-cerrar" type="button" class="icon-btn solo-movil" aria-label="Cerrar el menú"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-x"/></svg></button>
+        </div>
 
-  <div id="banner-rol" class="rol-banner" role="note" hidden>
-    <strong>Vista de supervisión (solo lectura).</strong>
-    Puedes ver el panel, el historial y los informes, pero no aprobar, rechazar, desconectar ni invitar.
-  </div>
+        <nav class="nav" aria-label="Vistas del sistema">
+          <button type="button" class="nav-btn" id="nav-panel" data-vista="panel" aria-current="page">
+            <span class="nav-l"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-layout-dashboard"/></svg><span>Panel de Control</span></span>
+            <span id="n-correos" class="nav-n sin-n"></span>
+          </button>
+          <button type="button" class="nav-btn" id="nav-analitica" data-vista="analitica">
+            <span class="nav-l"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-chart-column"/></svg><span>Analítica y Tráfico</span></span>
+            <span id="n-analitica" class="nav-n azul sin-n"></span>
+          </button>
+          <button type="button" class="nav-btn" id="nav-buzones" data-vista="buzones">
+            <span class="nav-l"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-users"/></svg><span>Usuarios Conectados</span></span>
+            <span id="n-buzones" class="nav-n gris sin-n"></span>
+          </button>
+          <button type="button" class="nav-btn" id="nav-historial" data-vista="historial">
+            <span class="nav-l"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-history"/></svg><span>Historial de Amenazas</span></span>
+            <span id="n-historial" class="nav-n gris sin-n"></span>
+          </button>
+          <button type="button" class="nav-btn" id="nav-politica" data-vista="politica">
+            <span class="nav-l"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-sliders-horizontal"/></svg><span>Configuración de Auditoría</span></span>
+          </button>
+        </nav>
+      </div>
 
-  <section id="seguridad" class="seguridad" aria-labelledby="titulo-seguridad" hidden>
-    <h2 id="titulo-seguridad">Alertas de seguridad (últimas 24 horas)</h2>
-    <ul id="eventos-seguridad"></ul>
-    <p class="nota">Son intentos de acceso a este panel. Si no los reconoces, cambia las credenciales y revisa quién está autorizado.</p>
-  </section>
+      <div class="menu-pie">
+        <div class="usuario">
+          <div class="usuario-fila">
+            <span id="cobertura-pill" class="pill-ok"><span class="punto pulso"></span><span id="cobertura-pill-txt">— BUZONES</span></span>
+            <span id="modo-txt" class="mono tenue"></span>
+          </div>
+          <div class="perfil">
+            <div id="avatar" class="avatar" aria-hidden="true">··</div>
+            <div class="perfil-txt">
+              <div id="perfil-nombre" class="perfil-nombre">Cargando…</div>
+              <div id="perfil-desc" class="perfil-desc"> </div>
+            </div>
+          </div>
+          <div id="rol-caja" class="rol-caja reserva">
+            <label for="rol-select" class="etiqueta">Rol activo / permisos</label>
+            <select id="rol-select">
+              <option value="admin">Administrador</option>
+              <option value="supervisor">Supervisor (solo lectura)</option>
+            </select>
+          </div>
+          <p id="rol-fijo" class="rol-fijo" hidden></p>
+          <dl id="permisos" class="permisos"></dl>
+        </div>
+        <button id="btn-salir" type="button" class="btn btn-ghost" hidden>
+          <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-log-out"/></svg>
+          Salir
+        </button>
+      </div>
+    </aside>
 
-  <nav class="tabs" role="tablist" aria-label="Secciones del panel">
-    <button type="button" role="tab" id="tab-resumen" data-tab="resumen" aria-controls="panel-resumen" aria-selected="true">Resumen</button>
-    <button type="button" role="tab" id="tab-correos" data-tab="correos" aria-controls="panel-correos" aria-selected="false" tabindex="-1">Correos <span id="n-correos" class="tab-n sin-n"></span></button>
-    <button type="button" role="tab" id="tab-buzones" data-tab="buzones" aria-controls="panel-buzones" aria-selected="false" tabindex="-1">Buzones</button>
-    <button type="button" role="tab" id="tab-historial" data-tab="historial" aria-controls="panel-historial" aria-selected="false" tabindex="-1">Historial</button>
-  </nav>
+    <!-- Columna central -->
+    <div class="centro">
+      <header class="barra">
+        <button id="menu-abrir" type="button" class="icon-btn solo-movil" aria-label="Abrir el menú" aria-controls="menu" aria-expanded="false"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-menu"/></svg></button>
+        <h1 id="titulo-vista" class="sr-only">Panel de Control</h1>
+        <div class="barra-sel">
+          <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-building-2"/></svg>
+          <span id="org-nombre" class="org-nombre">Tu organización</span>
+        </div>
+        <div class="barra-sel oculto-mov">
+          <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-layers"/></svg>
+          <label for="filtro-area" class="sr-only">Filtrar por área</label>
+          <select id="filtro-area" class="select-limpio"><option value="">Todas las áreas</option></select>
+        </div>
+        <div hidden>
+          <label for="filtro">Ver buzón</label>
+          <select id="filtro"><option value="">Todos los buzones</option></select>
+        </div>
+        <div class="barra-der">
+          <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
+          <button id="reset" type="button" class="btn btn-barra" aria-label="Reiniciar demostración">
+            <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-rotate-ccw"/></svg>
+            <span>Reiniciar demostración</span>
+          </button>
+        </div>
+      </header>
 
-  <main id="contenido" tabindex="-1">
-    <section id="panel-resumen" class="panel" role="tabpanel" aria-labelledby="tab-resumen" tabindex="-1">
-      <h2>Resumen de la organización</h2>
-      <section id="estado" class="panel-estado cargando" aria-labelledby="estado-titulo" aria-live="polite">
-        <div id="estado-num" class="num" aria-hidden="true">0</div>
-        <div class="txt"><strong id="estado-titulo">Revisando tus buzones…</strong><span id="estado-detalle">Un momento: estamos comprobando si hay correos que decidir.</span></div>
+      <div id="banner" class="demo-banner" role="note">
+        <strong>Demostración con datos simulados.</strong>
+        No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
+        <button id="guia-abrir" type="button" class="link-btn">Ver guía de 3 pasos</button>
+      </div>
+
+      <div id="banner-rol" class="rol-banner" role="note" hidden>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-eye"/></svg>
+        <span><strong>Vista de supervisión (solo lectura).</strong>
+        Puedes ver el panel, el historial y los informes, pero no aprobar, rechazar, desconectar ni invitar.</span>
+      </div>
+
+      <section id="seguridad" class="seguridad" aria-labelledby="titulo-seguridad" hidden>
+        <h2 id="titulo-seguridad">Alertas de seguridad (últimas 24 horas)</h2>
+        <ul id="eventos-seguridad"></ul>
+        <p class="nota">Son intentos de acceso a este panel. Si no los reconoces, cambia las credenciales y revisa quién está autorizado.</p>
       </section>
-      <div id="resumen-org"></div>
-      <div id="resumen-buscar" class="toolbar" hidden>
-        <label for="buscar-resumen">Buscar un buzón:</label>
-        <input id="buscar-resumen" type="search" maxlength="80" placeholder="Nombre o cuenta">
-        <label class="chk"><input id="solo-atencion" type="checkbox"> Solo los que necesitan atención</label>
-      </div>
-      <div id="resumen-cards" class="cards-buzon" aria-busy="true">
-        <div class="cbuzon esqueleto" aria-hidden="true"></div>
-        <div class="cbuzon esqueleto" aria-hidden="true"></div>
-        <div class="cbuzon esqueleto" aria-hidden="true"></div>
-      </div>
-      <p id="resumen-mas-nota" class="nota" hidden></p>
-      <button id="resumen-mas" type="button" class="btn btn-ghost" hidden>Mostrar más buzones</button>
-    </section>
 
-    <section id="panel-correos" class="panel" role="tabpanel" aria-labelledby="tab-correos" tabindex="-1" hidden>
-    <section class="intro" aria-labelledby="titulo-alertas">
-      <h2 id="titulo-alertas">Correos que requieren tu atención</h2>
-      <p>Atalaya revisa los correos nuevos de tu equipo, te explica por qué desconfía y <strong>nunca aísla ni borra nada sin tu aprobación</strong>.</p>
-      <div class="toolbar">
-        <label for="filtro">Ver buzón:</label>
-        <select id="filtro"><option value="">Todos los buzones</option></select>
-        <button id="reset" type="button" class="btn btn-ghost">Reiniciar demostración</button>
-      </div>
-    </section>
+      <div class="trabajo">
+        <main id="contenido" tabindex="0">
+          <!-- Vista: panel de control -->
+          <div id="vista-panel" class="vista" aria-label="Panel de control">
+            <section id="estado" class="sr-only" aria-live="polite"><span id="estado-titulo"></span><span id="estado-detalle"></span></section>
 
-    <section id="campanas" class="campanas" aria-label="Campañas detectadas" hidden></section>
-    <p id="filtro-activo" class="filtro-activo" hidden></p>
-    <nav id="chips" class="chips" aria-label="Filtrar los correos por grupo"></nav>
-    <div id="controles" class="controles" hidden>
-      <button id="expandir" type="button" class="btn btn-ghost">Expandir todo</button>
-      <button id="contraer" type="button" class="btn btn-ghost">Contraer todo (menos texto)</button>
+            <section class="kpis" aria-label="Cifras de los correos analizados">
+              <button type="button" class="kpi" data-kpi="all">
+                <span class="kpi-cab"><span class="kpi-nom">Correos Analizados</span><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-scan-line"/></svg></span>
+                <span class="kpi-pie"><span id="kpi-total" class="kpi-n">—</span><span id="kpi-total-sub" class="kpi-sub">buzones</span></span>
+              </button>
+              <button type="button" class="kpi alta" data-kpi="high">
+                <span class="kpi-cab"><span class="kpi-nom"><span class="punto pulso"></span>Amenazas Altas</span><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-shield-alert"/></svg></span>
+                <span class="kpi-pie"><span id="kpi-alta" class="kpi-n">—</span><span id="kpi-alta-sub" class="kpi-sub">Score ≥ 60</span></span>
+              </button>
+              <button type="button" class="kpi media" data-kpi="medium">
+                <span class="kpi-cab"><span class="kpi-nom"><span class="punto"></span>Amenazas Medias</span><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-triangle-alert"/></svg></span>
+                <span class="kpi-pie"><span id="kpi-media" class="kpi-n">—</span><span id="kpi-media-sub" class="kpi-sub">Score 30–59</span></span>
+              </button>
+              <button type="button" class="kpi baja" data-kpi="low">
+                <span class="kpi-cab"><span class="kpi-nom"><span class="punto"></span>Amenazas Bajas</span><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-info"/></svg></span>
+                <span class="kpi-pie"><span id="kpi-baja" class="kpi-n">—</span><span id="kpi-baja-sub" class="kpi-sub">Score &lt; 30</span></span>
+              </button>
+            </section>
+
+            <section id="campanas" class="campanas cargando" aria-label="Campañas detectadas"></section>
+
+            <section class="tabla-caja" aria-labelledby="titulo-correos">
+              <h2 id="titulo-correos" class="sr-only">Correos monitoreados</h2>
+              <div class="tabla-barra">
+                <div id="filtros" class="segmentos" role="group" aria-label="Filtrar los correos por nivel o estado"></div>
+                <div class="buscar">
+                  <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-search"/></svg>
+                  <label for="buscar-correos" class="sr-only">Buscar empleado o remitente</label>
+                  <input id="buscar-correos" type="search" maxlength="80" placeholder="Buscar empleado o remitente…" autocomplete="off">
+                </div>
+              </div>
+              <p id="filtro-activo" class="filtro-activo" hidden></p>
+              <div class="tabla">
+                <div class="tabla-cab" aria-hidden="true">
+                  <span>Riesgo / Score</span>
+                  <span>Empleado</span>
+                  <span>Remitente</span>
+                  <span class="c-vector">Vector</span>
+                  <span class="der">Hora</span>
+                  <span class="der">Estado</span>
+                </div>
+                <div id="lista-correos" class="lista-correos" role="list" aria-label="Lista de correos"></div>
+              </div>
+              <div class="tabla-pie">
+                <span id="lista-resumen" class="mono" aria-live="polite"></span>
+                <button id="correos-mas" type="button" class="btn btn-sm" hidden>Mostrar más</button>
+                <span class="pill-neutro mono">Cola prioritaria activa</span>
+              </div>
+            </section>
+          </div>
+
+          <!-- Vista: analítica y tráfico -->
+          <div id="vista-analitica" class="vista" aria-labelledby="titulo-analitica" hidden>
+            <div class="cab-vista">
+              <div>
+                <h2 id="titulo-analitica"><svg class="ico azul" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-chart-column"/></svg> Analítica de Tráfico y Detección</h2>
+                <p id="analitica-sub" class="nota">Cifras calculadas con las alertas guardadas de tus buzones.</p>
+              </div>
+              <div id="rango" class="segmentos" role="group" aria-label="Rango de tiempo">
+                <button type="button" class="seg" data-rango="24h" aria-pressed="false">24h</button>
+                <button type="button" class="seg" data-rango="7d" aria-pressed="true">7d</button>
+                <button type="button" class="seg" data-rango="30d" aria-pressed="false">30d</button>
+              </div>
+            </div>
+            <div class="analitica-fila">
+              <section class="caja" aria-labelledby="titulo-grafico">
+                <h3 id="titulo-grafico" class="caja-t">Volumen de correos inspeccionados vs. amenazas</h3>
+                <p id="grafico-sub" class="nota"></p>
+                <ul class="leyenda" aria-label="Leyenda del gráfico">
+                  <li><span class="cuadro limpio"></span>Limpio</li><li><span class="cuadro alta"></span>Alta</li><li><span class="cuadro media"></span>Media</li><li><span class="cuadro baja"></span>Baja</li>
+                </ul>
+                <div class="grafico-caja">
+                  <div id="grafico-y" class="grafico-y" aria-hidden="true"></div>
+                  <div id="grafico" class="grafico" role="img" aria-label="Gráfico de barras de correos por periodo"></div>
+                </div>
+                <div id="grafico-x" class="grafico-x" aria-hidden="true"></div>
+                <table id="grafico-tabla" class="sr-only"><caption>Datos del gráfico</caption><thead><tr><th scope="col">Periodo</th><th scope="col">Analizados</th><th scope="col">Altas</th><th scope="col">Medias</th><th scope="col">Bajas</th></tr></thead><tbody></tbody></table>
+              </section>
+              <section class="caja vectores" aria-labelledby="titulo-vectores">
+                <div class="caja-cab"><h3 id="titulo-vectores" class="caja-t"><svg class="ico rojo" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-target"/></svg> Vectores detectados</h3><span id="vectores-n" class="mono tenue"></span></div>
+                <ul id="vectores" class="vectores-lista"></ul>
+                <div class="vectores-pie">
+                  <div><span>Tasa de riesgo (alto + medio)</span><span id="tasa-riesgo" class="mono">—</span></div>
+                  <div><span>Esperan tu decisión</span><span id="n-decidir" class="mono">—</span></div>
+                </div>
+              </section>
+            </div>
+            <section aria-labelledby="titulo-por-area">
+              <div class="cab-sec cab-sec-fila">
+                <div>
+                  <h3 id="titulo-por-area" class="sec-t"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-building-2"/></svg> <span id="titulo-por-area-t">Análisis detallado por área</span></h3>
+                  <p class="nota">Comparativa de volumen analizado, severidad, tasa de riesgo, vector dominante y buzón más atacado de cada área.</p>
+                </div>
+                <span class="pill-neutro mono">Ordenado por tasa de riesgo ↓</span>
+              </div>
+              <div id="area-cards" class="cards3"></div>
+              <div class="tabla-caja">
+                <div class="tabla tabla-area" role="table" aria-label="Comparativa por área">
+                  <div class="tabla-cab" role="row">
+                    <span role="columnheader">Área</span><span role="columnheader" class="der">Buzones</span><span role="columnheader" class="der">Analizados</span><span role="columnheader" class="der">Altas</span><span role="columnheader" class="der">Medias</span><span role="columnheader" class="der">Bajas</span><span role="columnheader">Tasa de riesgo</span><span role="columnheader" class="c-vector">Vector principal</span>
+                  </div>
+                  <div id="tabla-area"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Vista: usuarios conectados -->
+          <div id="vista-buzones" class="vista" aria-labelledby="titulo-buzones" hidden>
+            <div class="cab-vista">
+              <div>
+                <h2 id="titulo-buzones">Directorio de Buzones Conectados</h2>
+                <p class="nota">Cada persona conecta su propio correo desde un enlace de un solo uso. No ve este panel. Aquí ves quién está vigilado y quién quedó sin cobertura.</p>
+              </div>
+              <button id="btn-invitar" type="button" class="btn btn-blanco"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-user-plus"/></svg> Invitar buzón</button>
+            </div>
+            <div class="caja filtros-caja">
+              <div id="buzones-filtros" class="segmentos" role="group" aria-label="Filtrar los buzones"></div>
+              <div class="buscar">
+                <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-search"/></svg>
+                <label for="buscar-lista" class="sr-only">Buscar un buzón</label>
+                <input id="buscar-lista" type="search" maxlength="80" placeholder="Buscar empleado…" autocomplete="off">
+              </div>
+            </div>
+            <div class="tabla-caja">
+              <div class="tabla tabla-usuarios" role="table" aria-label="Buzones conectados">
+                <div class="tabla-cab" role="row">
+                  <span role="columnheader">Empleado</span><span role="columnheader">Área</span><span role="columnheader">Buzón corporativo</span><span role="columnheader" class="c-vector">Último chequeo</span><span role="columnheader">Nivel de riesgo</span><span role="columnheader" class="der">Acción</span>
+                </div>
+                <div id="buzones"></div>
+              </div>
+              <div class="tabla-pie"><span id="buzones-res" class="mono"></span><button id="lista-mas" type="button" class="btn btn-sm" hidden>Mostrar más</button></div>
+            </div>
+          </div>
+
+          <!-- Vista: historial de amenazas -->
+          <div id="vista-historial" class="vista" aria-labelledby="titulo-historial" hidden>
+            <div class="cab-vista">
+              <div>
+                <h2 id="titulo-historial">Bitácora de Auditoría e Historial de Amenazas</h2>
+                <p class="nota">Qué se hizo, quién y cuándo: accesos, invitaciones, buzones y decisiones sobre correos.</p>
+              </div>
+              <div class="acciones-cab">
+                <a id="rep-pdf" class="btn" href="/api/org-report?formato=pdf&amp;download=true" download><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-download"/></svg> Informe en PDF</a>
+                <button id="exportar-csv" type="button" class="btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-download"/></svg> Exportar bitácora (.CSV)</button>
+              </div>
+            </div>
+            <p class="nota"><a id="rep-ver" href="/api/org-report" target="_blank" rel="noopener">Ver el reporte de la organización</a> · <a id="rep-bajar" href="/api/org-report?download=true" download>Descargar en texto</a></p>
+            <div class="tabla-caja">
+              <div class="tabla tabla-historial" role="table" aria-label="Historial de actividad">
+                <div class="tabla-cab" role="row">
+                  <span role="columnheader">Fecha y hora</span><span role="columnheader">Acción</span><span role="columnheader">Incidente / Buzón</span><span role="columnheader">Persona</span>
+                </div>
+                <div id="historial"></div>
+              </div>
+              <div class="tabla-pie"><span id="historial-res" class="mono"></span><button id="historial-mas" type="button" class="btn btn-sm" hidden>Mostrar más</button></div>
+            </div>
+          </div>
+
+          <!-- Vista: configuración de auditoría (solo lectura) -->
+          <div id="vista-politica" class="vista" aria-labelledby="titulo-politica" hidden>
+            <div class="cab-vista">
+              <div>
+                <h2 id="titulo-politica">Configuración de Auditoría y Políticas Heurísticas</h2>
+                <p class="nota">Cómo se calcula el riesgo. Solo lectura: estos límites y reglas los fija el sistema y no se cambian desde el panel.</p>
+              </div>
+              <span class="pill-neutro"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-lock"/></svg> Solo lectura</span>
+            </div>
+            <div class="dos-col">
+              <section class="caja" aria-labelledby="titulo-umbrales">
+                <h3 id="titulo-umbrales" class="caja-t mayus"><svg class="ico azul" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-gauge"/></svg> Umbrales de puntuación heurística</h3>
+                <p class="nota">Atalaya suma los puntos de cada señal que encuentra en un correo.</p>
+                <div class="umbral"><div class="umbral-t"><span>Mínimo para <strong class="rojo">Amenaza Alta</strong></span><span id="pol-alta" class="mono rojo">— pts</span></div><div class="pista" aria-hidden="true"><span id="pista-alta" class="pista-llena alta"></span><span id="punto-alta" class="pista-punto"></span></div></div>
+                <div class="umbral"><div class="umbral-t"><span>Mínimo para <strong class="ambar">Amenaza Media</strong></span><span id="pol-media" class="mono ambar">— pts</span></div><div class="pista" aria-hidden="true"><span id="pista-media" class="pista-llena media"></span><span id="punto-media" class="pista-punto"></span></div></div>
+                <div class="umbral"><div class="umbral-t"><span>Por debajo es <strong class="celeste">Amenaza Baja</strong></span><span id="pol-baja" class="mono celeste">— pts</span></div></div>
+                <ul class="niveles">
+                  <li><span class="badge high">Riesgo alto</span> Pone la etiqueta «Sospechoso» y te pide decidir. No aísla nada por su cuenta.</li>
+                  <li><span class="badge medium">Riesgo medio</span> Pone la etiqueta «Revisar» para que lo mires cuando puedas.</li>
+                  <li><span class="badge low">Riesgo bajo</span> No hace nada: el correo sigue en la bandeja.</li>
+                </ul>
+              </section>
+              <section class="caja" aria-labelledby="titulo-controles">
+                <h3 id="titulo-controles" class="caja-t mayus"><svg class="ico verde" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-shield-check"/></svg> Controles de protección activa</h3>
+                <ul class="controles">
+                  <li><div><strong>Cuarentena solo con aprobación humana</strong><span>Atalaya nunca aísla ni borra nada por su cuenta, y nunca envía correos.</span></div><span class="fijo"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-check"/></svg> Siempre</span></li>
+                  <li><div><strong>Motivo escrito obligatorio (10 a 500 caracteres)</strong><span>Al marcar un correo como legítimo, al dejar sin aislar uno de riesgo alto o al aislar uno que no era alto.</span></div><span class="fijo"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-check"/></svg> Siempre</span></li>
+                  <li><div><strong>Verificación SPF / DKIM / DMARC</strong><span>La calcula el código a partir de las cabeceras. La IA solo redacta el resumen.</span></div><span class="fijo"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-check"/></svg> Siempre</span></li>
+                  <li><div><strong>Privacidad de los datos</strong><span>Solo se guarda el veredicto, las señales, un identificador, el estado y metadatos técnicos de cabeceras. Nunca el asunto, el cuerpo ni los adjuntos.</span></div><span class="fijo"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-check"/></svg> Siempre</span></li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </main>
+
+        <!-- Columna derecha: inspector del correo -->
+        <aside id="detalle" class="detalle" aria-label="Inspector del correo">
+          <div class="detalle-barra">
+            <button id="detalle-cerrar" type="button" class="btn btn-ghost solo-menos-ancho">
+              <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-arrow-left"/></svg>
+              Volver a la lista
+            </button>
+          </div>
+          <div id="detalle-cuerpo" class="detalle-cuerpo"></div>
+        </aside>
+      </div>
     </div>
-    <section id="alertas" aria-live="polite" tabindex="-1"></section>
-    </section>
-
-    <section id="panel-buzones" class="panel buzones" role="tabpanel" aria-labelledby="tab-buzones" tabindex="-1" hidden>
-      <h2 id="titulo-buzones">Buzones vigilados</h2>
-      <p class="nota">Cada persona conecta su propio correo desde un enlace que le envías con «Invitar buzón». No ve este panel.</p>
-      <div id="lista-buscar" class="toolbar" hidden>
-        <label for="buscar-lista">Buscar:</label>
-        <input id="buscar-lista" type="search" maxlength="80" placeholder="Nombre o cuenta">
-      </div>
-      <ul id="buzones" class="lista-buzones"></ul>
-      <button id="lista-mas" type="button" class="btn btn-ghost" hidden>Mostrar más</button>
-    </section>
-
-    <section id="panel-historial" class="panel historial" role="tabpanel" aria-labelledby="tab-historial" tabindex="-1" hidden>
-      <h2 id="titulo-historial">Historial de actividad</h2>
-      <p class="nota">Qué se hizo, quién y cuándo: accesos, invitaciones, buzones y decisiones sobre correos.</p>
-      <div class="fila reporte">
-        <a id="rep-ver" class="btn" href="/api/org-report" target="_blank" rel="noopener">Ver reporte de la organización</a>
-        <a id="rep-pdf" class="btn btn-primary" href="/api/org-report?formato=pdf&amp;download=true" download>Descargar informe en PDF</a>
-        <a id="rep-bajar" class="btn btn-ghost" href="/api/org-report?download=true" download>Descargar en texto</a>
-      </div>
-      <ul id="historial" class="lista-historial"></ul>
-    </section>
-  </main>
+  </div>
 
   <aside id="guia" class="guia" role="region" aria-labelledby="guia-titulo" hidden>
     <p id="guia-paso" class="paso"></p>
@@ -130,11 +358,11 @@
     <form method="dialog" id="form-motivo" class="dlg">
       <h2 id="motivo-titulo">Motivo de tu decisión</h2>
       <p id="motivo-ayuda"></p>
-      <label for="motivo-texto">Motivo (mínimo 10 caracteres)</label>
+      <label for="motivo-texto">Motivo (entre 10 y 500 caracteres)</label>
       <textarea id="motivo-texto" rows="4" maxlength="500" required></textarea>
       <p id="motivo-msg" class="mensaje" role="alert"></p>
       <div class="fila fin">
-        <button id="motivo-ok" type="submit" class="btn btn-primary">Confirmar</button>
+        <button id="motivo-ok" type="submit" class="btn btn-main">Confirmar</button>
         <button id="motivo-cancelar" type="button" class="btn btn-ghost">Cancelar</button>
       </div>
     </form>
@@ -146,6 +374,8 @@
       <p>Escribe el nombre o puesto de la persona. Se creará un enlace de <strong>un solo uso</strong> que vence en 48 horas. Envíaselo por un canal que uses con ella.</p>
       <label for="inv-label">Nombre o puesto</label>
       <input id="inv-label" type="text" maxlength="80" placeholder="Ej.: Ana Ruiz - Recursos Humanos" required>
+      <label for="inv-area">Área de la persona</label>
+      <select id="inv-area"></select>
       <div id="inv-resultado" hidden>
         <label for="inv-url">Enlace de invitación (se muestra solo ahora)</label>
         <div class="fila">
@@ -155,17 +385,13 @@
       </div>
       <p id="inv-msg" class="mensaje" role="status" aria-live="polite"></p>
       <h3>Invitaciones</h3>
-      <ul id="inv-lista" class="lista-buzones"></ul>
+      <ul id="inv-lista" class="lista-inv"></ul>
       <div class="fila fin">
-        <button id="inv-crear" type="submit" class="btn btn-primary">Crear enlace</button>
+        <button id="inv-crear" type="submit" class="btn btn-main">Crear enlace</button>
         <button id="inv-cerrar" type="button" class="btn btn-ghost">Cerrar</button>
       </div>
     </form>
   </dialog>
-
-  <footer>
-    <p>Privacidad: Atalaya solo guarda el veredicto, las señales y un identificador. No guarda el contenido de tus correos.</p>
-  </footer>
 
   <script src="/static/app.js"></script>
 </body>
