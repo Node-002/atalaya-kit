@@ -81,9 +81,9 @@ El proyecto se construyó con Claude Code (agente de programación) bajo reglas 
 | [docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md) | Medición de la detección |
 
 ## Licencia
-Atalaya se publica bajo la **GNU Affero General Public License v3.0 (AGPL-3.0)**; el texto completo está en [LICENSE](LICENSE). En palabras simples: puedes leer, usar y modificar el código, pero si lo ofreces a otras personas como servicio en red, debes publicar tus cambios bajo la misma licencia. Para usarlo dentro de un producto cerrado hace falta una **licencia comercial**, que se acuerda con el equipo (Sentinel Zero) a través del perfil de GitHub de este repositorio.
+Atalaya se publica bajo la **GNU Affero General Public License v3.0 (AGPL-3.0)**; el texto completo está en [LICENSE](LICENSE). En palabras simples: puedes leer, usar y modificar el código, pero si lo ofreces a otras personas como servicio en red, debes publicar tus cambios bajo la misma licencia. Para usarlo dentro de un producto cerrado hace falta una **licencia comercial**, que se acuerda con el equipo (Atalaya) a través del perfil de GitHub de este repositorio.
 
-© 2026 Sentinel Zero. Los avisos de software de terceros irán en [NOTICE](NOTICE) cuando se integren los iconos y las fuentes.
+© 2026 Atalaya. Los avisos de software de terceros irán en [NOTICE](NOTICE) cuando se integren los iconos y las fuentes.
 
 ## Aviso
 Atalaya es una herramienta de apoyo, no una garantía de seguridad. La decisión final es siempre de una persona.
