@@ -9,14 +9,17 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <a class="skip" href="#mensaje">Saltar al contenido</a>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <p id="mensaje" class="mensaje toast" role="status" aria-live="polite"></p>
 
   <header class="top">
     <h1>Atalaya <span>vigila tu correo</span></h1>
-    <div class="top-actions">
+    <div class="top-estado">
       <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
       <span id="yo" class="muted" hidden></span>
-      <button id="btn-rol" type="button" class="btn btn-ghost" hidden></button>
+    </div>
+    <div class="top-actions">
+      <button id="btn-rol" type="button" class="btn btn-ghost reserva">Ver como supervisor</button>
       <button id="btn-invitar" type="button" class="btn btn-primary">Invitar buzón</button>
       <button id="btn-salir" type="button" class="btn btn-ghost" hidden>Salir</button>
     </div>
@@ -25,6 +28,7 @@
   <div id="banner" class="demo-banner" role="note">
     <strong>Demostración con datos simulados.</strong>
     No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
+    <button id="guia-abrir" type="button" class="link-btn">Ver guía de 3 pasos</button>
   </div>
 
   <div id="banner-rol" class="rol-banner" role="note" hidden>
@@ -40,23 +44,29 @@
 
   <nav class="tabs" role="tablist" aria-label="Secciones del panel">
     <button type="button" role="tab" id="tab-resumen" data-tab="resumen" aria-controls="panel-resumen" aria-selected="true">Resumen</button>
-    <button type="button" role="tab" id="tab-correos" data-tab="correos" aria-controls="panel-correos" aria-selected="false" tabindex="-1">Correos <span id="n-correos" class="tab-n" hidden></span></button>
+    <button type="button" role="tab" id="tab-correos" data-tab="correos" aria-controls="panel-correos" aria-selected="false" tabindex="-1">Correos <span id="n-correos" class="tab-n sin-n"></span></button>
     <button type="button" role="tab" id="tab-buzones" data-tab="buzones" aria-controls="panel-buzones" aria-selected="false" tabindex="-1">Buzones</button>
     <button type="button" role="tab" id="tab-historial" data-tab="historial" aria-controls="panel-historial" aria-selected="false" tabindex="-1">Historial</button>
   </nav>
 
-  <main>
-    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
-
+  <main id="contenido" tabindex="-1">
     <section id="panel-resumen" class="panel" role="tabpanel" aria-labelledby="tab-resumen" tabindex="-1">
       <h2>Resumen de la organización</h2>
+      <section id="estado" class="panel-estado cargando" aria-labelledby="estado-titulo" aria-live="polite">
+        <div id="estado-num" class="num" aria-hidden="true">0</div>
+        <div class="txt"><strong id="estado-titulo">Revisando tus buzones…</strong><span id="estado-detalle">Un momento: estamos comprobando si hay correos que decidir.</span></div>
+      </section>
       <div id="resumen-org"></div>
       <div id="resumen-buscar" class="toolbar" hidden>
         <label for="buscar-resumen">Buscar un buzón:</label>
         <input id="buscar-resumen" type="search" maxlength="80" placeholder="Nombre o cuenta">
         <label class="chk"><input id="solo-atencion" type="checkbox"> Solo los que necesitan atención</label>
       </div>
-      <div id="resumen-cards" class="cards-buzon"></div>
+      <div id="resumen-cards" class="cards-buzon" aria-busy="true">
+        <div class="cbuzon esqueleto" aria-hidden="true"></div>
+        <div class="cbuzon esqueleto" aria-hidden="true"></div>
+        <div class="cbuzon esqueleto" aria-hidden="true"></div>
+      </div>
       <p id="resumen-mas-nota" class="nota" hidden></p>
       <button id="resumen-mas" type="button" class="btn btn-ghost" hidden>Mostrar más buzones</button>
     </section>
@@ -103,6 +113,17 @@
       <ul id="historial" class="lista-historial"></ul>
     </section>
   </main>
+
+  <aside id="guia" class="guia" role="region" aria-labelledby="guia-titulo" hidden>
+    <p id="guia-paso" class="paso"></p>
+    <h2 id="guia-titulo"></h2>
+    <p id="guia-texto"></p>
+    <div id="guia-puntos" class="puntitos" aria-hidden="true"></div>
+    <div class="fila">
+      <button id="guia-hacer" type="button" class="btn btn-main"></button>
+      <button id="guia-cerrar" type="button" class="btn btn-ghost">Ahora no</button>
+    </div>
+  </aside>
 
   <dialog id="dlg-motivo" aria-labelledby="motivo-titulo">
     <form method="dialog" id="form-motivo" class="dlg">
