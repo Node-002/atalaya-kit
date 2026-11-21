@@ -1,5 +1,7 @@
 # Instalar Atalaya en tu organización (kit autoalojado)
 
+> English version: [INSTALLATION.en.md](INSTALLATION.en.md). Los mensajes de arranque del kit y del verificador salen en inglés con `ATALAYA_LANG=en`.
+
 > **Estado honesto.** Esta guía se escribió leyendo la documentación oficial de Google y probando el kit **solo en Python** (pruebas automáticas y un arranque local con datos falsos). **No se ha probado con una organización de Google Workspace real, ni con Docker en un servidor real, ni con Google Cloud.** Los pasos de Google Cloud siguen la documentación pública a 21 nov 2026; si tu pantalla se ve distinta, la interfaz cambió: sigue el sentido del paso y avísanos. Lo que no se pudo confirmar está marcado con ⚠️ y listado en la [sección 10](#10-lo-que-no-está-verificado).
 
 ## 0. Qué es esto y qué te llevas

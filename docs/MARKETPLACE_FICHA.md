@@ -1,5 +1,7 @@
 # Ficha del Marketplace: Atalaya — kit autoalojado
 
+> English version: [MARKETPLACE_LISTING.en.md](MARKETPLACE_LISTING.en.md).
+
 > **Estado honesto:** el kit se probó con pruebas automáticas y un arranque local en Python. **No se ha probado con una organización de Google Workspace real**, no hay clientes ni ingresos, y el precio es una **hipótesis con huecos**.
 
 ## En una frase
