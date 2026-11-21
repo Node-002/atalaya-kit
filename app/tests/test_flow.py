@@ -74,7 +74,10 @@ def test_cannot_approve_twice(env):
 def test_reject_keeps_label_not_quarantine(env):
     client, provider = env
     alert = _by_domain(client, "bancogeneral-seguridad.com")
-    body = client.post(f"/api/alerts/{alert['id']}/reject").json()
+    body = client.post(
+        f"/api/alerts/{alert['id']}/reject",
+        json={"reason": "Verificado con el remitente por otro canal"},
+    ).json()
     assert body["status"] == "labeled"
     assert "demo-001" not in provider.quarantined
 
@@ -83,7 +86,10 @@ def test_mark_legit_releases(env):
     client, provider = env
     alert = _by_domain(client, "bancogeneral-seguridad.com")
     client.post(f"/api/alerts/{alert['id']}/approve")
-    body = client.post(f"/api/alerts/{alert['id']}/legit").json()
+    body = client.post(
+        f"/api/alerts/{alert['id']}/legit",
+        json={"reason": "Verificado con el remitente por otro canal"},
+    ).json()
     assert body["status"] == "dismissed"
     assert "demo-001" not in provider.quarantined
 
@@ -136,7 +142,7 @@ def test_alerts_are_ordered_by_priority_then_newest(env):
     alerts = client.get("/api/alerts").json()
     priorities = [a["priority"] for a in alerts]
     assert priorities == sorted(priorities)
-    assert alerts[0]["priority"] == 0 and alerts[-1]["priority"] == 3
+    assert alerts[0]["priority"] == 0 and alerts[-1]["priority"] == 4
     high = [a for a in alerts if a["priority"] == 0]
     times = [a["received_at"] for a in high]
     assert times == sorted(times, reverse=True)  # lo mas reciente primero

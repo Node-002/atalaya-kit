@@ -99,3 +99,7 @@ a.btn { display: inline-block; text-decoration: none; }
 .lista-historial { list-style: none; margin: 0; padding: 0; }
 .evento { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem; word-break: break-word; }
 .hora-ev { font-size: .85rem; }
+textarea { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #0d1117; color: var(--text); width: 100%; resize: vertical; }
+.linea { list-style: none; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--line); font-size: .88rem; }
+.linea li { margin: 6px 0; }
+.motivo { margin: 2px 0 0 12px; padding-left: 8px; border-left: 2px solid var(--accent); color: var(--text); }

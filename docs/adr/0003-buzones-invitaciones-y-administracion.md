@@ -34,3 +34,15 @@ En una empresa, **quien usa Atalaya y quien tiene el correo son personas distint
 
 ## Verificación
 90 pruebas, entre ellas: un solo uso y vencimiento de la invitación, token no almacenado en claro (también en el archivo de la base), tokens OAuth cifrados y ilegibles con otra clave, rechazo de consentimiento ausente, API cerrada sin sesión, cookie falsificada, límite de intentos, arranque rechazado sin contraseña o con una débil, CSRF, aislamiento de acciones entre buzones, y recorrido completo de invitación en la demo. **No probado:** el intercambio real con Google desde una invitación (requiere iniciar sesión con una cuenta de prueba).
+
+## Actualización (20 nov, noche): decisiones con motivo escrito e informe por correo
+**Contexto.** Cuarentena y "sacar de cuarentena" eran decisiones sin justificar, y el panel mezclaba "revisado por una persona" con "nunca fue sospechoso". Con falsos positivos inevitables, una empresa necesita saber *quién* decidió, *cuándo* y *por qué*.
+
+**Decisión.**
+1. **Motivo escrito (mínimo 10 caracteres, máximo 500) obligatorio cuando la decisión va más allá o en contra de Atalaya:** sacar un correo de cuarentena, aislar uno que Atalaya *no* marcó como alto, dejar sin aislar uno que sí marcó como alto, y marcar como legítimo uno señalado. **Aislar lo que Atalaya ya marcó como alto es un clic** (el análisis de Atalaya queda como razón; el motivo es opcional) para no frenar la respuesta en un incidente.
+2. **El servidor valida el motivo antes de tocar el correo:** sin motivo válido no cambia nada en Gmail (error 422).
+3. **Estado "revisado":** una persona ya decidió. Los correos revisados van a su propio grupo, separados de "Sin riesgo" (lo que Atalaya nunca vio sospechoso), y conservan el riesgo original visible.
+4. **Historial por correo** con hora, quién, decisión y motivo; y **un informe por correo** (`GET /api/alerts/{id}/report`, texto Markdown): qué detectó Atalaya (señales y puntos), las decisiones humanas con su motivo, y el resultado. **No incluye el contenido del correo** ni adjuntos.
+5. Los motivos se guardan **cifrados** junto con la alerta; no se copian a la auditoría general (que está en claro), para no filtrar texto escrito por personas.
+
+**Límites.** El motivo es texto libre y confiable solo en la medida en que lo sea la persona que lo escribe: no hay firma ni segundo aprobador. El informe es texto plano, no un PDF. Atalaya **no aprende** de estas decisiones (no hay lista de remitentes de confianza): se deja como siguiente paso, por el riesgo de suplantación.

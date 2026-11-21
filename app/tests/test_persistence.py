@@ -37,7 +37,10 @@ def test_quarantined_email_can_be_restored_after_a_restart(registry):
     restarted = _start(registry)  # "se reinicio el servidor"
     again = _by_domain(restarted, "bancogeneral-seguridad.com")
     assert again.status is Status.quarantined
-    assert restarted.mark_legit(again.id, "admin").status is Status.dismissed
+    assert (
+        restarted.mark_legit(again.id, "admin", "Verificado con el remitente").status
+        is Status.dismissed
+    )
 
 
 def test_restart_does_not_reanalyze_or_reset_human_decisions(registry):
@@ -93,7 +96,7 @@ def test_clear_removes_stored_alerts(registry):
 def test_human_decisions_are_saved_each_time(registry):
     store = _start(registry)
     phishing = _by_domain(store, "bancogeneral-seguridad.com")
-    store.reject(phishing.id, "admin")
+    store.reject(phishing.id, "admin", "Verificado con el remitente")
     assert (
         _by_domain(_start(registry), "bancogeneral-seguridad.com").status
         is Status.labeled

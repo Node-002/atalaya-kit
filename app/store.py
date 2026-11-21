@@ -17,6 +17,21 @@ from app.providers.base import MailProvider
 log = logging.getLogger("atalaya.store")
 
 DEFAULT_MAILBOX = "default"
+MIN_REASON = 10
+MAX_REASON = 500
+
+
+class ReasonRequired(ValueError):
+    """Falta el motivo escrito que exige la decision."""
+
+
+def _clean_reason(reason: str | None, required: bool) -> str | None:
+    text = (reason or "").strip()
+    if required and len(text) < MIN_REASON:
+        raise ReasonRequired(
+            f"Escribe el motivo de tu decision (al menos {MIN_REASON} caracteres)."
+        )
+    return text[:MAX_REASON] or None
 
 
 def _alert_id(mailbox_id: str, ref: str) -> str:
@@ -198,38 +213,49 @@ class AlertStore:
         return self._alerts.get(alert_id)
 
     # --- Acciones humanas ---------------------------------------------------------------
-    def _record(self, alert: Alert, action: str, by: str) -> None:
-        alert.actions.append(ActionRecord(type=action, at=_now(), by=by))
+    def _record(
+        self, alert: Alert, action: str, by: str, reason: str | None = None
+    ) -> None:
+        alert.actions.append(ActionRecord(type=action, at=_now(), by=by, reason=reason))
 
     def _provider_for(self, alert_id: str) -> tuple[MailProvider, str]:
         mailbox_id, ref = self._refs[alert_id]
         return self._providers[mailbox_id][1], ref
 
-    def approve(self, alert_id: str, by: str) -> Alert:
+    def approve(self, alert_id: str, by: str, reason: str | None = None) -> Alert:
         with self._lock:
             alert = self._require_quarantinable(alert_id)
+            reason = _clean_reason(
+                reason, alert.quarantine_needs_reason
+            )  # antes de tocar el correo
             provider, ref = self._provider_for(alert_id)
             provider.quarantine(ref)
             alert.status = Status.quarantined
-            self._record(alert, "quarantine", by)
+            self._record(alert, "quarantine", by, reason)
             self._persist(alert_id)
             return alert
 
-    def reject(self, alert_id: str, by: str) -> Alert:
+    def reject(self, alert_id: str, by: str, reason: str | None = None) -> Alert:
         with self._lock:
             alert = self._require_pending(alert_id)
+            reason = _clean_reason(
+                reason, required=True
+            )  # contradice a Atalaya: exige motivo
             alert.status = Status.labeled  # se conserva la etiqueta, no se aisla
-            self._record(alert, "reject_quarantine", by)
+            self._record(alert, "reject_quarantine", by, reason)
             self._persist(alert_id)
             return alert
 
-    def mark_legit(self, alert_id: str, by: str) -> Alert:
+    def mark_legit(self, alert_id: str, by: str, reason: str | None = None) -> Alert:
         with self._lock:
             alert = self._alerts[alert_id]
+            reason = _clean_reason(
+                reason, required=True
+            )  # sacar de cuarentena exige motivo
             provider, ref = self._provider_for(alert_id)
             provider.release(ref)
             alert.status = Status.dismissed
-            self._record(alert, "mark_legit", by)
+            self._record(alert, "mark_legit", by, reason)
             self._persist(alert_id)
             return alert
 

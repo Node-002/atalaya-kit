@@ -11,17 +11,17 @@ const STATUS_TEXT = {
   dismissed: "Sin acción",
 };
 const ACTION_TEXT = {
-  quarantine: "Cuarentena aprobada",
-  reject_quarantine: "Cuarentena rechazada",
-  mark_legit: "Marcado como legítimo",
+  quarantine: "Puso el correo en cuarentena",
+  reject_quarantine: "Decidió no aislarlo y dejarlo donde estaba",
+  mark_legit: "Lo devolvió a la bandeja como legítimo",
 };
 const INVITE_TEXT = { pending: "Pendiente", used: "Usada", expired: "Vencida", revoked: "Revocada" };
 const GROUPS = [
   { match: (a) => a.priority === 0, title: "Requieren tu decisión ahora", urgent: true },
   { match: (a) => a.priority === 1, title: "Para revisar" },
-  { match: (a) => a.status === "quarantined", title: "En cuarentena (fuera de la bandeja)" },
-  { match: (a) => a.priority === 2 && a.status !== "quarantined", title: "Ya atendidos" },
-  { match: (a) => a.priority === 3, title: "Sin riesgo" },
+  { match: (a) => a.priority === 2, title: "En cuarentena (fuera de la bandeja)" },
+  { match: (a) => a.priority === 3, title: "Revisados (con tu decisión y su motivo)" },
+  { match: (a) => a.priority === 4, title: "Sin riesgo (Atalaya no vio nada sospechoso)" },
 ];
 
 const alertsEl = document.getElementById("alertas");
@@ -73,6 +73,20 @@ function formatDate(iso) {
   });
 }
 
+const REVIEW_OUTCOME = {
+  mark_legit: "Revisado: era legítimo",
+  reject_quarantine: "Revisado: se dejó sin aislar",
+};
+
+function statusText(alert) {
+  if (alert.status === "quarantined") return "En cuarentena";
+  if (alert.reviewed) {
+    const human = alert.actions.filter((a) => REVIEW_OUTCOME[a.type]);
+    if (human.length) return REVIEW_OUTCOME[human[human.length - 1].type];
+  }
+  return STATUS_TEXT[alert.status];
+}
+
 function actionLabel(action) {
   if (action.type.startsWith("label:")) return "Etiqueta «" + action.type.slice(6) + "»";
   return ACTION_TEXT[action.type] || action.type;
@@ -87,7 +101,7 @@ function renderAlert(alert) {
 
   const badges = el("div", "badges");
   badges.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
-  badges.appendChild(el("span", "badge estado", STATUS_TEXT[alert.status]));
+  badges.appendChild(el("span", "badge estado", statusText(alert)));
   card.appendChild(badges);
 
   if (alert.explanation_source !== "rules") {
@@ -107,31 +121,99 @@ function renderAlert(alert) {
   }
 
   if (alert.status === "quarantined") {
-    card.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja."));
+    card.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja y te pide el motivo."));
   }
+
   const actions = el("div", "actions");
-  const quarantineMsg = "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.";
   if (alert.status !== "quarantined") {
-    actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () => act(alert.id, "approve", quarantineMsg)));
+    const needs = alert.quarantine_needs_reason;
+    actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () =>
+      act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.",
+        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aislás: queda en el informe del correo." } : null)));
   }
   if (alert.status === "pending_approval") {
-    actions.appendChild(button("Dejarlo donde está", "btn", () => act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.")));
+    actions.appendChild(button("Dejarlo donde está", "btn", () =>
+      act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.",
+        { title: "Dejarlo donde está", help: "Atalaya lo marcó como riesgo alto y vas a dejarlo en la bandeja. Explica por qué: queda en el informe del correo." })));
   }
   if (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed")) {
     const restoring = alert.status === "quarantined";
-    actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-primary", () => act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.")));
+    actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-primary", () =>
+      act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.",
+        { title: restoring ? "Sacar de cuarentena" : "Es legítimo",
+          help: restoring ? "Vas a devolver el correo a la bandeja. Explica por qué no era peligroso: queda en el informe del correo." : "Explica por qué este correo es legítimo: queda en el informe del correo." })));
   }
+  const reportUrl = "/api/alerts/" + encodeURIComponent(alert.id) + "/report";
+  const view = el("a", "btn btn-ghost", "Ver informe");
+  view.href = reportUrl;
+  view.target = "_blank";
+  view.rel = "noopener";
+  actions.appendChild(view);
+  const download = el("a", "btn btn-ghost", "Descargar informe");
+  download.href = reportUrl + "?download=true";
+  download.setAttribute("download", "");
+  actions.appendChild(download);
   card.appendChild(actions);
 
   if (alert.actions.length) {
-    card.appendChild(el("p", "audit", "Historial: " + alert.actions.map(actionLabel).join(" → ")));
+    const ul = el("ul", "linea");
+    alert.actions.forEach((a) => {
+      const li = el("li", "");
+      const who = a.by === "atalaya" ? "Atalaya" : actorLabel(a.by);
+      li.appendChild(el("span", "muted", formatDate(a.at) + " · "));
+      li.appendChild(el("strong", "", who + ": "));
+      li.appendChild(document.createTextNode(actionLabel(a)));
+      if (a.reason) li.appendChild(el("div", "motivo", "Motivo: " + a.reason));
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
   }
   return card;
 }
 
-async function act(id, verb, okMessage) {
+// --- Motivo escrito de una decision ---------------------------------------------------------
+const dlgMotivo = document.getElementById("dlg-motivo");
+const motivoTexto = document.getElementById("motivo-texto");
+const motivoMsg = document.getElementById("motivo-msg");
+let motivoResolve = null;
+
+function askReason(spec) {
+  document.getElementById("motivo-titulo").textContent = spec.title;
+  document.getElementById("motivo-ayuda").textContent = spec.help;
+  motivoTexto.value = "";
+  motivoMsg.textContent = "";
+  dlgMotivo.showModal();
+  motivoTexto.focus();
+  return new Promise((resolve) => { motivoResolve = resolve; });
+}
+
+function closeReason(value) {
+  dlgMotivo.close();
+  if (motivoResolve) motivoResolve(value);
+  motivoResolve = null;
+}
+
+document.getElementById("form-motivo").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = motivoTexto.value.trim();
+  if (text.length < 10) {
+    motivoMsg.textContent = "Escribe el motivo con al menos 10 caracteres.";
+    return;
+  }
+  closeReason(text);
+});
+document.getElementById("motivo-cancelar").addEventListener("click", () => closeReason(null));
+dlgMotivo.addEventListener("cancel", () => closeReason(null));
+
+async function act(id, verb, okMessage, reasonSpec) {
   try {
-    await api("/api/alerts/" + encodeURIComponent(id) + "/" + verb, "POST");
+    let body;
+    if (reasonSpec) {
+      const reason = await askReason(reasonSpec);
+      if (reason === null) return; // se canceló: no se hace nada
+      body = { reason };
+    }
+    await api("/api/alerts/" + encodeURIComponent(id) + "/" + verb, "POST", body);
     msgEl.textContent = okMessage;
     await load();
   } catch (err) {
@@ -217,7 +299,7 @@ const ACTIVITY_TEXT = {
   mailbox_rejected_identity: "Se rechazó una cuenta con caracteres sospechosos",
   alert_quarantine: "Puso un correo en cuarentena",
   alert_kept: "Decidió no aislar un correo",
-  alert_legit: "Marcó un correo como legítimo",
+  alert_legit: "Sacó un correo de cuarentena o lo marcó como legítimo",
 };
 
 function actorLabel(actor) {
