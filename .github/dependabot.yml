@@ -5,14 +5,24 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    # Todas las acciones llegan en una sola PR semanal.
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
   - package-ecosystem: docker  # imagen base del Dockerfile
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "docker"
     ignore:
       # Las dependencias se fijaron y probaron con Python 3.12: no subir de version mayor ni menor
       # de Python sin probar todo a proposito (si hace falta, se hace a mano).
