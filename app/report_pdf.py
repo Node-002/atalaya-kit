@@ -71,6 +71,9 @@ def _safe(text: object) -> str:
     out: list[str] = []
     for ch in str(text):
         ch = _PUNCT.get(ch, ch)
+        if len(ch) > 1:  # sustitucion de varios caracteres (de _PUNCT)
+            out.append(ch)
+            continue
         code = ord(ch)
         if ch in "\r\n\t":
             out.append(" ")
@@ -78,10 +81,8 @@ def _safe(text: object) -> str:
             continue
         elif code <= 0xFF:
             out.append(ch)
-        elif len(ch) == 1:
+        else:
             out.append(f"[U+{code:04X}]")
-        else:  # multiples caracteres (de _PUNCT)
-            out.append(ch)
     return html.escape("".join(out), quote=False)
 
 
@@ -91,21 +92,60 @@ def _when(at: datetime) -> str:
 
 # --- Estilos ---------------------------------------------------------------------------------
 def _style(name: str, **kw) -> ParagraphStyle:
-    base = dict(fontName="Helvetica", fontSize=9.5, leading=13, textColor=INK, spaceAfter=4)
+    base = {
+        "fontName": "Helvetica",
+        "fontSize": 9.5,
+        "leading": 13,
+        "textColor": INK,
+        "spaceAfter": 4,
+    }
     base.update(kw)
     return ParagraphStyle(name, **base)
 
 
 BODY = _style("body")
 SMALL = _style("small", fontSize=8, leading=10.5, textColor=MUTED)
-TITLE = _style("title", fontName="Helvetica-Bold", fontSize=22, leading=26, textColor=ACCENT, spaceAfter=2)
+TITLE = _style(
+    "title",
+    fontName="Helvetica-Bold",
+    fontSize=22,
+    leading=26,
+    textColor=ACCENT,
+    spaceAfter=2,
+)
 SUBTITLE = _style("subtitle", fontSize=11.5, leading=15, textColor=MUTED, spaceAfter=10)
-H2 = _style("h2", fontName="Helvetica-Bold", fontSize=12.5, leading=16, textColor=ACCENT, spaceBefore=14, spaceAfter=5)
+H2 = _style(
+    "h2",
+    fontName="Helvetica-Bold",
+    fontSize=12.5,
+    leading=16,
+    textColor=ACCENT,
+    spaceBefore=14,
+    spaceAfter=5,
+)
 CELL = _style("cell", fontSize=8.4, leading=10.6, spaceAfter=0)
-CELLB = _style("cellb", fontName="Helvetica-Bold", fontSize=8.4, leading=10.6, spaceAfter=0)
-CELLH = _style("cellh", fontName="Helvetica-Bold", fontSize=8.4, leading=10.6, textColor=colors.white, spaceAfter=0)
-KPI_N = _style("kpin", fontName="Helvetica-Bold", fontSize=20, leading=23, spaceAfter=0, alignment=1)
-KPI_L = _style("kpil", fontSize=7.8, leading=9.6, textColor=MUTED, spaceAfter=0, alignment=1)
+CELLB = _style(
+    "cellb", fontName="Helvetica-Bold", fontSize=8.4, leading=10.6, spaceAfter=0
+)
+CELLH = _style(
+    "cellh",
+    fontName="Helvetica-Bold",
+    fontSize=8.4,
+    leading=10.6,
+    textColor=colors.white,
+    spaceAfter=0,
+)
+KPI_N = _style(
+    "kpin",
+    fontName="Helvetica-Bold",
+    fontSize=20,
+    leading=23,
+    spaceAfter=0,
+    alignment=1,
+)
+KPI_L = _style(
+    "kpil", fontSize=7.8, leading=9.6, textColor=MUTED, spaceAfter=0, alignment=1
+)
 
 
 def p(text: object, style: ParagraphStyle = BODY) -> Paragraph:
@@ -153,7 +193,7 @@ class _NumberedCanvas(rl_canvas.Canvas):
         super().__init__(*args, **kwargs)
         self._saved: list[dict] = []
 
-    def showPage(self):  # noqa: N802 (nombre de ReportLab)
+    def showPage(self):
         self._saved.append(dict(self.__dict__))
         self._startPage()
 
@@ -180,9 +220,15 @@ class _NumberedCanvas(rl_canvas.Canvas):
         self.line(0.75 * inch, h - 0.88 * inch, w - 0.75 * inch, h - 0.88 * inch)
         self.line(0.75 * inch, 0.78 * inch, w - 0.75 * inch, 0.78 * inch)
         self.setFont("Helvetica", 7.6)
-        self.drawString(0.75 * inch, 0.6 * inch, "Confidencial. No incluye el contenido de los correos ni sus adjuntos.")
+        self.drawString(
+            0.75 * inch,
+            0.6 * inch,
+            "Confidencial. No incluye el contenido de los correos ni sus adjuntos.",
+        )
         self.drawString(0.75 * inch, 0.46 * inch, f"Generado el {self.generated}")
-        self.drawRightString(w - 0.75 * inch, 0.6 * inch, f"Página {self._pageNumber} de {total}")
+        self.drawRightString(
+            w - 0.75 * inch, 0.6 * inch, f"Página {self._pageNumber} de {total}"
+        )
         self.restoreState()
 
 
@@ -213,7 +259,9 @@ def _build(story: list, title: str, generated: str) -> bytes:
 
 
 # --- Piezas reutilizables -------------------------------------------------------------------
-def _table(rows: list[list[Paragraph]], widths: list[float], header: bool = True) -> Table:
+def _table(
+    rows: list[list[Paragraph]], widths: list[float], header: bool = True
+) -> Table:
     t = Table(rows, colWidths=widths, repeatRows=1 if header else 0)
     style = [
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -236,7 +284,8 @@ def _kpis(items: list[tuple[str, int, colors.Color | None]]) -> Table:
     cells = [
         [
             Paragraph(
-                f'<font color="{(color or INK).hexval().replace("0x", "#")}">{n}</font>', KPI_N
+                f'<font color="{(color or INK).hexval().replace("0x", "#")}">{n}</font>',
+                KPI_N,
             ),
             Paragraph(_safe(label), KPI_L),
         ]
@@ -306,7 +355,10 @@ def _how_to_read() -> list:
 
 def _risk_chip(risk_value: str) -> Paragraph:
     color = RISK_COLOR[risk_value].hexval().replace("0x", "#")
-    return Paragraph(f'<font color="{color}"><b>{_safe(RISK_TEXT[risk_value].upper())}</b></font>', CELL)
+    return Paragraph(
+        f'<font color="{color}"><b>{_safe(RISK_TEXT[risk_value].upper())}</b></font>',
+        CELL,
+    )
 
 
 def _decisions(alert: Alert) -> list:
@@ -314,7 +366,11 @@ def _decisions(alert: Alert) -> list:
 
 
 def _reason(action) -> str:
-    return " ".join(action.reason.split()) if action.reason else "(sin motivo escrito: aceptó el análisis de Atalaya)"
+    return (
+        " ".join(action.reason.split())
+        if action.reason
+        else "(sin motivo escrito: aceptó el análisis de Atalaya)"
+    )
 
 
 # --- Informe de un correo -------------------------------------------------------------------
@@ -334,18 +390,31 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
         ("Estado actual", _final_state(alert)),
     ]
     story.append(
-        _table([[p(k, CELLB), p(v, CELL)] for k, v in meta], [w * 0.3, w * 0.7], header=False)
+        _table(
+            [[p(k, CELLB), p(v, CELL)] for k, v in meta],
+            [w * 0.3, w * 0.7],
+            header=False,
+        )
     )
 
     story.append(p("1. Qué detectó Atalaya (automático)", H2))
     story.append(
         _table(
             [
-                [p("Riesgo", CELLH), p("Puntos", CELLH), p("Origen del resumen", CELLH)],
+                [
+                    p("Riesgo", CELLH),
+                    p("Puntos", CELLH),
+                    p("Origen del resumen", CELLH),
+                ],
                 [
                     _risk_chip(alert.risk.value),
                     p(score, CELL),
-                    p(SOURCE_TEXT.get(alert.explanation_source, alert.explanation_source), CELL),
+                    p(
+                        SOURCE_TEXT.get(
+                            alert.explanation_source, alert.explanation_source
+                        ),
+                        CELL,
+                    ),
                 ],
             ],
             [w * 0.25, w * 0.2, w * 0.55],
@@ -365,10 +434,22 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     if not human:
         story.append(p("Todavía no hay decisiones humanas sobre este correo.", BODY))
     else:
-        rows = [[p("Fecha", CELLH), p("Persona", CELLH), p("Decisión", CELLH), p("Motivo", CELLH)]]
+        rows = [
+            [
+                p("Fecha", CELLH),
+                p("Persona", CELLH),
+                p("Decisión", CELLH),
+                p("Motivo", CELLH),
+            ]
+        ]
         for a in human:
             rows.append(
-                [p(_when(a.at), CELL), p(a.by, CELL), p(DECISION_TEXT.get(a.type, a.type), CELL), p(_reason(a), CELL)]
+                [
+                    p(_when(a.at), CELL),
+                    p(a.by, CELL),
+                    p(DECISION_TEXT.get(a.type, a.type), CELL),
+                    p(_reason(a), CELL),
+                ]
             )
         story.append(_table(rows, [w * 0.19, w * 0.17, w * 0.28, w * 0.36]))
 
@@ -415,7 +496,11 @@ def build_org_pdf(
     story.append(
         _kpis(
             [
-                ("Esperan una decisión", pending, RISK_COLOR["high"] if pending else None),
+                (
+                    "Esperan una decisión",
+                    pending,
+                    RISK_COLOR["high"] if pending else None,
+                ),
                 ("En cuarentena", quarantined, None),
                 ("Revisados por una persona", reviewed, None),
                 ("Campañas detectadas", len(campaigns), None),
@@ -434,20 +519,40 @@ def build_org_pdf(
             c[a.risk.value] += 1
             c["quarantined"] += a.status is Status.quarantined
             c["pending"] += a.status is Status.pending_approval
-        ordered = sorted(boxes, key=lambda b: (-per[b]["pending"], -per[b]["high"], boxes[b]))
+        ordered = sorted(
+            boxes, key=lambda b: (-per[b]["pending"], -per[b]["high"], boxes[b])
+        )
         rows = [
-            [p(h, CELLH) for h in ("Buzón", "Correos", "Alto", "Medio", "En cuarentena", "Esperan decisión")]
+            [
+                p(h, CELLH)
+                for h in (
+                    "Buzón",
+                    "Correos",
+                    "Alto",
+                    "Medio",
+                    "En cuarentena",
+                    "Esperan decisión",
+                )
+            ]
         ]
         for b in ordered[:MAX_MAILBOXES]:
             c = per[b]
             rows.append(
                 [p(boxes[b], CELL)]
-                + [p(c[k], CELL) for k in ("total", "high", "medium", "quarantined", "pending")]
+                + [
+                    p(c[k], CELL)
+                    for k in ("total", "high", "medium", "quarantined", "pending")
+                ]
             )
-        story.append(_table(rows, [w * 0.34, w * 0.1, w * 0.1, w * 0.1, w * 0.18, w * 0.18]))
+        story.append(
+            _table(rows, [w * 0.34, w * 0.1, w * 0.1, w * 0.1, w * 0.18, w * 0.18])
+        )
         if len(ordered) > MAX_MAILBOXES:
             story.append(
-                p(f"Se muestran los {MAX_MAILBOXES} buzones con más urgencia de {len(ordered)}.", SMALL)
+                p(
+                    f"Se muestran los {MAX_MAILBOXES} buzones con más urgencia de {len(ordered)}.",
+                    SMALL,
+                )
             )
 
     story.append(p("3. Campañas detectadas", H2))
@@ -461,7 +566,12 @@ def build_org_pdf(
                 SMALL,
             )
         )
-        rows = [[p(h, CELLH) for h in ("Dominio del remitente", "Riesgo", "Buzones", "Aislados")]]
+        rows = [
+            [
+                p(h, CELLH)
+                for h in ("Dominio del remitente", "Riesgo", "Buzones", "Aislados")
+            ]
+        ]
         for c in campaigns:
             isolated = len(c.alert_ids) - c.actionable
             rows.append(
@@ -476,14 +586,24 @@ def build_org_pdf(
 
     story.append(p("4. Decisiones de las personas (más recientes primero)", H2))
     decisions = sorted(
-        ((x.at, x.by, a, x) for a in alerts for x in a.actions if x.type in HUMAN_ACTIONS),
+        (
+            (x.at, x.by, a, x)
+            for a in alerts
+            for x in a.actions
+            if x.type in HUMAN_ACTIONS
+        ),
         key=lambda r: r[0],
         reverse=True,
     )
     if not decisions:
         story.append(p("Todavía no hay decisiones humanas.", BODY))
     else:
-        rows = [[p(h, CELLH) for h in ("Fecha", "Persona", "Buzón / dominio", "Decisión", "Motivo")]]
+        rows = [
+            [
+                p(h, CELLH)
+                for h in ("Fecha", "Persona", "Buzón / dominio", "Decisión", "Motivo")
+            ]
+        ]
         for at, by, a, x in decisions[:MAX_DECISIONS]:
             rows.append(
                 [
@@ -496,7 +616,12 @@ def build_org_pdf(
             )
         story.append(_table(rows, [w * 0.15, w * 0.13, w * 0.24, w * 0.22, w * 0.26]))
         if len(decisions) > MAX_DECISIONS:
-            story.append(p(f"Se muestran las {MAX_DECISIONS} más recientes de {len(decisions)}.", SMALL))
+            story.append(
+                p(
+                    f"Se muestran las {MAX_DECISIONS} más recientes de {len(decisions)}.",
+                    SMALL,
+                )
+            )
 
     story.append(p("5. Actividad registrada", H2))
     if not audit:
@@ -508,10 +633,15 @@ def build_org_pdf(
             detail = " ".join(str(e.get("detail") or "").split())
             if detail:
                 text += f" ({detail[:90]})"
-            rows.append([p(str(e["at"])[:19].replace("T", " "), CELL), p(e["actor"], CELL), p(text, CELL)])
+            rows.append(
+                [
+                    p(str(e["at"])[:19].replace("T", " "), CELL),
+                    p(e["actor"], CELL),
+                    p(text, CELL),
+                ]
+            )
         story.append(_table(rows, [w * 0.2, w * 0.22, w * 0.58]))
 
     story += _how_to_read()
     story.append(_signature_block())
     return _build(story, "Informe de la organización", _when(now))
-
