@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <a class="skip" href="#alertas">Saltar a las alertas</a>
+  <a class="skip" href="#mensaje">Saltar al contenido</a>
 
   <header class="top">
     <h1>Atalaya <span>vigila tu correo</span></h1>
@@ -30,7 +30,23 @@
     <p class="nota">Son intentos de acceso a este panel. Si no los reconoces, cambia las credenciales y revisa quién está autorizado.</p>
   </section>
 
+  <nav class="tabs" role="tablist" aria-label="Secciones del panel">
+    <button type="button" role="tab" id="tab-resumen" data-tab="resumen" aria-controls="panel-resumen" aria-selected="true">Resumen</button>
+    <button type="button" role="tab" id="tab-correos" data-tab="correos" aria-controls="panel-correos" aria-selected="false" tabindex="-1">Correos <span id="n-correos" class="tab-n" hidden></span></button>
+    <button type="button" role="tab" id="tab-buzones" data-tab="buzones" aria-controls="panel-buzones" aria-selected="false" tabindex="-1">Buzones</button>
+    <button type="button" role="tab" id="tab-historial" data-tab="historial" aria-controls="panel-historial" aria-selected="false" tabindex="-1">Historial</button>
+  </nav>
+
   <main>
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+
+    <section id="panel-resumen" class="panel" role="tabpanel" aria-labelledby="tab-resumen" tabindex="-1">
+      <h2>Resumen de la organización</h2>
+      <div id="resumen-org"></div>
+      <div id="resumen-cards" class="cards-buzon"></div>
+    </section>
+
+    <section id="panel-correos" class="panel" role="tabpanel" aria-labelledby="tab-correos" tabindex="-1" hidden>
     <section class="intro" aria-labelledby="titulo-alertas">
       <h2 id="titulo-alertas">Correos que requieren tu atención</h2>
       <p>Atalaya revisa los correos nuevos de tu equipo, te explica por qué desconfía y <strong>nunca aísla ni borra nada sin tu aprobación</strong>.</p>
@@ -41,21 +57,21 @@
       </div>
     </section>
 
-    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
     <nav id="chips" class="chips" aria-label="Filtrar los correos por grupo"></nav>
     <div id="controles" class="controles" hidden>
       <button id="expandir" type="button" class="btn btn-ghost">Expandir todo</button>
       <button id="contraer" type="button" class="btn btn-ghost">Contraer todo (menos texto)</button>
     </div>
     <section id="alertas" aria-live="polite" tabindex="-1"></section>
+    </section>
 
-    <section class="buzones" aria-labelledby="titulo-buzones">
+    <section id="panel-buzones" class="panel buzones" role="tabpanel" aria-labelledby="tab-buzones" tabindex="-1" hidden>
       <h2 id="titulo-buzones">Buzones vigilados</h2>
       <p class="nota">Cada persona conecta su propio correo desde un enlace que le envías con «Invitar buzón». No ve este panel.</p>
       <ul id="buzones" class="lista-buzones"></ul>
     </section>
 
-    <section class="historial" aria-labelledby="titulo-historial">
+    <section id="panel-historial" class="panel historial" role="tabpanel" aria-labelledby="tab-historial" tabindex="-1" hidden>
       <h2 id="titulo-historial">Historial de actividad</h2>
       <p class="nota">Qué se hizo, quién y cuándo: accesos, invitaciones, buzones y decisiones sobre correos.</p>
       <ul id="historial" class="lista-historial"></ul>

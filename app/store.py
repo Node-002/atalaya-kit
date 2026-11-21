@@ -77,6 +77,7 @@ class AlertStore:
         self._verdicts: dict[
             tuple[str, str], LLMVerdict | None
         ] = {}  # cache: una llamada por correo
+        self._last_poll: dict[str, datetime] = {}
         self._lock = threading.RLock()
         if provider is not None:
             self.add_provider(DEFAULT_MAILBOX, "", provider)
@@ -89,6 +90,7 @@ class AlertStore:
     def remove_provider(self, mailbox_id: str) -> None:
         with self._lock:
             self._providers.pop(mailbox_id, None)
+            self._last_poll.pop(mailbox_id, None)
             for alert_id in [a for a, (m, _) in self._refs.items() if m == mailbox_id]:
                 self._alerts.pop(alert_id, None)
                 self._refs.pop(alert_id, None)
@@ -102,6 +104,9 @@ class AlertStore:
             return [
                 (mid, label, prov) for mid, (label, prov) in self._providers.items()
             ]
+
+    def last_check(self, mailbox_id: str) -> datetime | None:
+        return self._last_poll.get(mailbox_id)
 
     def has_provider(self, mailbox_id: str) -> bool:
         return mailbox_id in self._providers
@@ -156,6 +161,7 @@ class AlertStore:
             for mailbox_id, (label, provider) in list(self._providers.items()):
                 try:
                     self._poll_one(mailbox_id, label, provider)
+                    self._last_poll[mailbox_id] = _now()
                 except Exception:
                     log.exception("Fallo la consulta del buzon %s", mailbox_id)
 

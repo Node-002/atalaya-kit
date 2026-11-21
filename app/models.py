@@ -116,3 +116,4 @@ class Coverage(BaseModel):
     label: str = ""
     account: str
     status: ConnectionStatus
+    last_check: datetime | None = None  # ultima vez que Atalaya reviso este buzon

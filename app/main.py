@@ -318,6 +318,7 @@ def create_app(
                     label=label or email,
                     account=email,
                     status=status,
+                    last_check=store.last_check(mailbox_id),
                 )
             )
         return result

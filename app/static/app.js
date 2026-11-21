@@ -39,7 +39,9 @@ function saveUi() {
   try { localStorage.setItem(UI_KEY, JSON.stringify({ collapsed: ui.collapsed })); } catch { /* sin almacenamiento */ }
 }
 const cardOpen = new Map(); // id de alerta -> abierta o cerrada (se conserva al refrescar)
-let lastAlerts = [];
+let lastAlerts = []; // lo que se ve en «Correos» (con el filtro de buzón)
+let allAlerts = [];
+let lastCoverage = [];
 
 const alertsEl = document.getElementById("alertas");
 const msgEl = document.getElementById("mensaje");
@@ -133,11 +135,20 @@ function renderAlert(alert) {
     body.appendChild(resumen);
   }
 
-  body.appendChild(el("p", "porque", alert.risk === "low" ? "Todo parece normal." : "Por qué desconfiamos:"));
-  if (alert.signals.length) {
+  if (!alert.signals.length) {
+    body.appendChild(el("p", "porque", "Todo parece normal."));
+  } else {
+    const top = alert.signals.reduce((a, b) => (b.weight > a.weight ? b : a));
+    const why = el("p", "porque");
+    why.appendChild(el("strong", "", "Motivo: "));
+    why.appendChild(document.createTextNode(top.description));
+    body.appendChild(why);
+    const tech = el("details", "tecnico");
+    tech.appendChild(el("summary", "", "Detalle técnico (" + alert.signals.length + (alert.signals.length === 1 ? " señal" : " señales") + ")"));
     const ul = el("ul", "signals");
-    alert.signals.forEach((s) => ul.appendChild(el("li", "", s.description)));
-    body.appendChild(ul);
+    alert.signals.forEach((s) => ul.appendChild(el("li", "", s.description + " (" + s.weight + " puntos)")));
+    tech.appendChild(ul);
+    body.appendChild(tech);
   }
 
   if (alert.status === "quarantined") {
@@ -273,6 +284,7 @@ function renderCoverage(coverage) {
   coverage.forEach((c) => filtroEl.appendChild(new Option(c.label, c.mailbox_id)));
   filtroEl.value = coverage.some((c) => c.mailbox_id === selected) ? selected : "";
   multiple = coverage.length > 1;
+  lastCoverage = coverage;
 }
 
 async function disconnect(box) {
@@ -348,11 +360,75 @@ async function load() {
   if (authRequired) loadSecurity().catch(() => {});
   const coverage = await api("/api/coverage");
   renderCoverage(coverage);
-  const query = filtroEl.value ? "?mailbox_id=" + encodeURIComponent(filtroEl.value) : "";
-  const alerts = await api("/api/alerts" + query);
+  allAlerts = await api("/api/alerts");
+  applyFilter();
+}
 
-  lastAlerts = alerts;
+function applyFilter() {
+  lastAlerts = filtroEl.value ? allAlerts.filter((a) => a.mailbox_id === filtroEl.value) : allAlerts;
+  renderSummary();
   render();
+}
+
+// --- Resumen de la organizacion --------------------------------------------------------------
+function timeAgo(iso) {
+  if (!iso) return "sin comprobar";
+  const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 60) return "hace unos segundos";
+  if (secs < 3600) return "hace " + Math.round(secs / 60) + " min";
+  return "hace " + Math.round(secs / 3600) + " h";
+}
+
+function focusMailbox(id) {
+  filtroEl.value = id;
+  applyFilter();
+  showTab("correos");
+}
+
+function renderSummary() {
+  const head = document.getElementById("resumen-org");
+  const cards = document.getElementById("resumen-cards");
+  const pend = allAlerts.filter((a) => a.priority <= 1).length;
+  const uncovered = lastCoverage.filter((c) => c.status !== "connected").length;
+  head.replaceChildren(
+    pend
+      ? el("p", "resumen", pend + (pend === 1 ? " correo espera" : " correos esperan") + " una decisión en " + (lastCoverage.length === 1 ? "tu buzón." : "toda la organización."))
+      : el("p", "resumen ok", "Todo en orden: no hay correos pendientes de decisión."),
+  );
+  if (uncovered) {
+    head.appendChild(el("p", "resumen", uncovered + (uncovered === 1 ? " buzón está" : " buzones están") + " sin cobertura: Atalaya no puede vigilarlos hasta que se vuelvan a conectar."));
+  }
+  const badge = document.getElementById("n-correos");
+  badge.textContent = String(pend);
+  badge.hidden = pend === 0;
+
+  cards.replaceChildren();
+  lastCoverage.forEach((c) => {
+    const mine = allAlerts.filter((a) => a.mailbox_id === c.mailbox_id);
+    const ok = c.status === "connected";
+    const card = el("button", "cbuzon" + (ok ? "" : " sin-cobertura"));
+    card.type = "button";
+    card.setAttribute("aria-label", "Ver los correos de " + c.label);
+    card.addEventListener("click", () => focusMailbox(c.mailbox_id));
+    const top = el("div", "cb-top");
+    top.appendChild(el("strong", "", c.label));
+    top.appendChild(el("span", "badge " + (ok ? "low" : "high"), ok ? "Con cobertura" : "Sin cobertura"));
+    card.appendChild(top);
+    card.appendChild(el("div", "muted cb-cuenta", c.account));
+    const counts = el("div", "cb-cuentas");
+    let any = false;
+    GROUPS.forEach((g) => {
+      const n = mine.filter((a) => g.match(a)).length;
+      if (!n) return;
+      any = true;
+      counts.appendChild(el("span", "cnt" + (g.urgent ? " urgente" : ""), n + " " + g.short.toLowerCase()));
+    });
+    if (!any) counts.appendChild(el("span", "muted", "Sin correos todavía"));
+    card.appendChild(counts);
+    card.appendChild(el("div", "muted cb-chequeo", "Último chequeo: " + timeAgo(c.last_check)));
+    cards.appendChild(card);
+  });
+  if (!lastCoverage.length) cards.appendChild(el("p", "muted", "Todavía no hay buzones. Ve a «Buzones» para invitar a alguien."));
 }
 
 function renderChips() {
@@ -494,8 +570,32 @@ document.getElementById("inv-cerrar").addEventListener("click", async () => {
   await load().catch(() => {});
 });
 
+// --- Pestanas ------------------------------------------------------------------------------
+const TABS = ["resumen", "correos", "buzones", "historial"];
+function showTab(name, focusTab) {
+  if (!TABS.includes(name)) name = "resumen";
+  TABS.forEach((t) => {
+    const selected = t === name;
+    const tab = document.getElementById("tab-" + t);
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById("panel-" + t).hidden = !selected;
+    if (selected && focusTab) tab.focus();
+  });
+  if (window.location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+}
+document.querySelectorAll(".tabs [role=tab]").forEach((tab) => {
+  tab.addEventListener("click", () => showTab(tab.dataset.tab));
+  tab.addEventListener("keydown", (event) => {
+    const i = TABS.indexOf(tab.dataset.tab);
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step) { event.preventDefault(); showTab(TABS[(i + step + TABS.length) % TABS.length], true); }
+  });
+});
+showTab(window.location.hash.slice(1));
+
 // --- Arranque ------------------------------------------------------------------------------
-filtroEl.addEventListener("change", () => load().catch((err) => { msgEl.textContent = err.message; }));
+filtroEl.addEventListener("change", applyFilter);
 
 document.getElementById("reset").addEventListener("click", async () => {
   try {
