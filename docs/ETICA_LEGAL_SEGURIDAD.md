@@ -6,7 +6,7 @@
 
 ## 1. Principios éticos (tu postura profesional)
 - **Consentimiento informado:** solo se conecta una cuenta si su dueño acepta, entendiendo qué se lee y para qué.
-- **Mínimo necesario:** leer solo lo que se requiere, guardar solo veredicto, señales e ID. Nunca el cuerpo ni los adjuntos.
+- **Mínimo necesario:** leer solo lo que se requiere, guardar solo veredicto, señales, ID, estado y una lista blanca de metadatos técnicos de cabeceras (SPF/DKIM/DMARC, IP de origen, Return-Path enmascarado, host de enlaces neutralizado, dominio de Reply-To y cabeceras SMTP saneadas, ≤ 2 KB por correo; ADR 0010). Nunca el asunto, el cuerpo, los adjuntos ni direcciones de correo completas. La IP puede considerarse dato personal en algunas jurisdicciones: se guarda cifrada, solo para explicar el veredicto, y se borra al desconectar el buzón.
 - **Transparencia:** que el usuario vea que está conectado, qué se analiza y pueda **revocar** en cualquier momento.
 - **Proporcionalidad:** es seguridad, no vigilancia. El supervisor ve alertas, no lee correos ni evalúa a las personas.
 - **Sin uso secundario:** los datos no se usan para publicidad, rendimiento laboral ni disciplina.
