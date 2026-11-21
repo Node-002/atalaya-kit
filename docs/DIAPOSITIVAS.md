@@ -15,7 +15,7 @@
 ---
 ## 1. Atalaya — el agente que vigila el correo de tu organización
 - Revisa cada correo nuevo, explica en español por qué desconfía y pide aprobación humana para lo crítico.
-- Equipo Sentinel Zero (una persona) · Dojo AI Hackathon · Build for Business.
+- Equipo Atalaya (una persona) · Dojo AI Hackathon · Build for Business.
 - **Mostrar:** logo/escudo y nombre. Nada más.
 - **Notas:** 10 segundos. Frase de gancho: «Casi todo ataque empieza con un correo».
 

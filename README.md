@@ -1,6 +1,6 @@
 # Atalaya — el agente que vigila el correo de tu organización
 
-> Equipo **Sentinel Zero** (una persona) · Dojo AI Hackathon, 20–22 de noviembre de 2026 · Track **Build for Business**
+> Equipo **Atalaya** (una persona) · Dojo AI Hackathon, 20–22 de noviembre de 2026 · Track **Build for Business**
 
 Atalaya revisa cada correo nuevo de los buzones de una organización pequeña (empresa, colegio, universidad), explica en español **por qué** desconfía de alguno y, **solo con la aprobación de una persona**, lo saca de la bandeja. Nunca borra ni envía correos.
 

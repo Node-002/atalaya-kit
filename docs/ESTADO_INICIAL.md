@@ -1,7 +1,7 @@
 # Estado inicial del proyecto
 
 **Fecha de este registro:** 9 de noviembre de 2026 (antes del inicio del hackathon, 20 nov, 9:00 a. m. hora de Costa Rica)
-**Hackathon:** Dojo AI Hackathon · **Track objetivo:** 02 AI Operators · **Equipo:** Sentinel Zero (un integrante) · **Proyecto:** Atalaya (nombre anterior: HuelaEstafa Guard, renombrado el 9 nov 2026)
+**Hackathon:** Dojo AI Hackathon · **Track objetivo:** 02 AI Operators · **Equipo:** Atalaya (un integrante) · **Proyecto:** Atalaya (nombre anterior: HuelaEstafa Guard, renombrado el 9 nov 2026)
 
 > Este documento fija el punto de partida. Todo lo que se construya del 20 al 22 de noviembre se compara contra él.
 
