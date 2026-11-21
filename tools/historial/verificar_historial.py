@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 def git(repo, *args, check=True):
-    r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True)
+    r = subprocess.run(["git", "-C", str(repo), *args], check=False, capture_output=True)
     if check and r.returncode not in (0, 1):
         sys.exit(f"git {' '.join(args)} fallo en {repo}: {r.stderr.decode(errors='replace')[:300]}")
     return r.stdout
@@ -83,7 +83,7 @@ def main():
     for p in pats:
         args += ["-e", p]
     r = subprocess.run(
-        ["git", "-C", str(new), *args, *new_commits], capture_output=True
+        ["git", "-C", str(new), *args, *new_commits], check=False, capture_output=True
     )
     hits = [x for x in r.stdout.decode(errors="replace").splitlines() if x]
     print(f"    revisiones x archivos revisados con coincidencias (contenido): {len(hits)}")
@@ -172,12 +172,12 @@ def main():
             if not e:
                 continue
             meta_, path = e.split(b"\t", 1)
-            mode, typ, sha = meta_.split()
+            mode, _typ, sha = meta_.split()
             t[path] = (mode, sha.decode())
         return t
 
     def blob(repo, sha):
-        return subprocess.run(["git", "-C", str(repo), "cat-file", "blob", sha], capture_output=True).stdout
+        return subprocess.run(["git", "-C", str(repo), "cat-file", "blob", sha], check=False, capture_output=True).stdout
 
     pair_cache = {}
     commits_with_changes = 0
