@@ -9,7 +9,7 @@ import threading
 from datetime import UTC, datetime
 from typing import Protocol
 
-from app import analyzers, decision
+from app import analyzers, campaigns, decision
 from app.llm import Explainer, LLMVerdict, semantic_signals
 from app.models import ActionRecord, Alert, Message, Risk, Signal, Status
 from app.providers.base import MailProvider
@@ -187,13 +187,17 @@ class AlertStore:
                 actions.append(
                     ActionRecord(type=f"label:{label.value}", at=_now(), by="atalaya")
                 )
+            domain = analyzers.domain_of(msg.sender)
+            sender_key, topic_key = campaigns.fingerprints(msg.sender, msg.subject, domain)
             self._alerts[alert_id] = Alert(
                 id=alert_id,
                 message_ref=alert_id,
                 mailbox_id=mailbox_id,
                 mailbox_label=label_text,
                 received_at=msg.received_at,
-                sender_domain=analyzers.domain_of(msg.sender),
+                sender_domain=domain,
+                sender_key=sender_key,
+                topic_key=topic_key,
                 risk=risk,
                 signals=signals,
                 explanation=verdict.explanation
@@ -240,6 +244,24 @@ class AlertStore:
             self._record(alert, "quarantine", by, reason)
             self._persist(alert_id)
             return alert
+
+    def approve_many(
+        self, alert_ids: "list[str]", by: str, reason: str | None = None
+    ) -> "tuple[list[Alert], int]":
+        """Cuarentena de varias alertas con la MISMA regla que la individual: si alguna exige
+        motivo y no hay, no se toca ninguna. Devuelve (aisladas, fallidas)."""
+        with self._lock:
+            targets = [self._alerts[i] for i in alert_ids]
+            for alert in targets:
+                _clean_reason(reason, alert.quarantine_needs_reason)
+            done, failed = [], 0
+            for alert in targets:
+                try:
+                    done.append(self.approve(alert.id, by, reason))
+                except Exception:
+                    log.exception("Fallo la cuarentena de una alerta de la campana")
+                    failed += 1
+            return done, failed
 
     def reject(self, alert_id: str, by: str, reason: str | None = None) -> Alert:
         with self._lock:
