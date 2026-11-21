@@ -1,5 +1,6 @@
 // Panel de Atalaya (administracion). Todo contenido dinamico se inserta con
-// textContent (nunca innerHTML), asi que el texto de un correo no puede ejecutar codigo.
+// textContent o nodos creados a mano (nunca innerHTML), asi que el texto de un correo
+// no puede ejecutar codigo. Los anchos de las barras se asignan con style.setProperty.
 "use strict";
 
 const RISK_TEXT = { high: "Riesgo alto", medium: "Riesgo medio", low: "Riesgo bajo" };
@@ -15,44 +16,55 @@ const ACTION_TEXT = {
   reject_quarantine: "Decidió no aislarlo y dejarlo donde estaba",
   mark_legit: "Lo devolvió a la bandeja como legítimo",
 };
+const REVIEW_OUTCOME = {
+  mark_legit: "Revisado: era legítimo",
+  reject_quarantine: "Revisado: se dejó sin aislar",
+};
 const INVITE_TEXT = { pending: "Pendiente", used: "Usada", expired: "Vencida", revoked: "Revocada" };
-const GROUPS = [
-  { key: "decidir", short: "Por decidir", match: (a) => a.priority === 0, title: "Requieren tu decisión ahora", urgent: true, collapsed: false },
-  { key: "revisar", short: "Para revisar", match: (a) => a.priority === 1, title: "Para revisar", collapsed: false },
-  { key: "cuarentena", short: "En cuarentena", match: (a) => a.priority === 2, title: "En cuarentena (fuera de la bandeja)", collapsed: true },
-  { key: "revisados", short: "Revisados", match: (a) => a.priority === 3, title: "Revisados (con tu decisión y su motivo)", collapsed: true },
-  { key: "sinriesgo", short: "Sin riesgo", match: (a) => a.priority === 4, title: "Sin riesgo (Atalaya no vio nada sospechoso)", collapsed: true },
+const VIEWS = {
+  panel: "Panel de control",
+  buzones: "Buzones",
+  historial: "Historial",
+  politica: "Cómo se calcula el riesgo",
+};
+const OLD_HASHES = { correos: "panel", resumen: "panel" }; // enlaces de la version anterior
+
+const lastHuman = (a) => {
+  const h = a.actions.filter((x) => REVIEW_OUTCOME[x.type]);
+  return h.length ? h[h.length - 1].type : null;
+};
+const FILTERS = [
+  { key: "all", label: "Todos", cls: "", match: () => true },
+  { key: "high", label: "Alta", cls: "alta", match: (a) => a.risk === "high" },
+  { key: "medium", label: "Media", cls: "media", match: (a) => a.risk === "medium" },
+  { key: "low", label: "Baja", cls: "baja", match: (a) => a.risk === "low" },
+  { key: "quarantine", label: "Cuarentena", cls: "", match: (a) => a.status === "quarantined" },
+  { key: "legit", label: "Legítimos", cls: "legit", match: (a) => lastHuman(a) === "mark_legit" },
 ];
 
-// --- Preferencias de la vista (solo del navegador; no son datos de correos) ---
-const UI_KEY = "atalaya-vista";
-function loadUi() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
-    return { collapsed: saved.collapsed || {}, filter: "all" };
-  } catch {
-    return { collapsed: {}, filter: "all" };
-  }
-}
-const ui = loadUi();
-function saveUi() {
-  try { localStorage.setItem(UI_KEY, JSON.stringify({ collapsed: ui.collapsed })); } catch { /* sin almacenamiento */ }
-}
-const cardOpen = new Map(); // id de alerta -> abierta o cerrada (se conserva al refrescar)
-let lastAlerts = []; // lo que se ve en «Correos» (con el filtro de buzón)
+// --- Estado de la vista (solo del navegador; no son datos de correos) ---
 let allAlerts = [];
+let lastAlerts = []; // con el filtro de buzon
 let campaignList = [];
-const PAGE = 24; // buzones por pagina: legible con 50 o 200
-const view = { resumenLimit: PAGE, listaLimit: PAGE, groupLimit: {} };
-const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const matches = (c, q) => !q || norm(c.label + " " + c.account).includes(norm(q));
 let lastCoverage = [];
+let events = [];
+let policy = { medium: 30, high: 60 };
+let selectedId = null;
+let detTab = "analisis";
+let currentView = "panel";
+const PAGE = 24;
+const ui = { filter: "all", query: "", limit: 40, listaLimit: PAGE, historyLimit: 40 };
+const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const matches = (c, q) => !q || norm(c.label + " " + c.account).includes(norm(q));
+const scoreOf = (a) => a.signals.reduce((n, s) => n + s.weight, 0);
 
-const alertsEl = document.getElementById("alertas");
 const msgEl = document.getElementById("mensaje");
 const covEl = document.getElementById("coverage");
 const filtroEl = document.getElementById("filtro");
-const buzonesEl = document.getElementById("buzones");
+const listaEl = document.getElementById("lista-correos");
+const detalleEl = document.getElementById("detalle");
+const cuerpoEl = document.getElementById("detalle-cuerpo");
+const wide = window.matchMedia("(min-width: 1100px)");
 
 let mode = "demo";
 let authRequired = false;
@@ -66,11 +78,31 @@ function el(tag, cls, text) {
   return node;
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+function icon(name) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "ico");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const use = document.createElementNS(SVG_NS, "use");
+  use.setAttribute("href", "/static/icons/sprite.svg#i-" + name);
+  svg.appendChild(use);
+  return svg;
+}
+
 function button(label, cls, onClick) {
   const b = el("button", cls, label);
   b.type = "button";
   b.addEventListener("click", onClick);
   return b;
+}
+
+function linkButton(label, href, cls, download) {
+  const a = el("a", cls, label);
+  a.href = href;
+  if (download) a.setAttribute("download", "");
+  else { a.target = "_blank"; a.rel = "noopener"; }
+  return a;
 }
 
 // Aviso flotante con el resultado de cada accion (visible aunque la persona este mas abajo)
@@ -94,9 +126,9 @@ async function busy(btn, work) {
 }
 
 // Estado vacio o de error: explica que pasa y, si se puede, ofrece una salida
-function emptyState(icon, title, text, action) {
+function emptyState(glyph, title, text, action) {
   const box = el("div", "vacio");
-  box.appendChild(el("div", "icono", icon));
+  box.appendChild(el("div", "icono", glyph));
   box.appendChild(el("strong", "", title));
   if (text) box.appendChild(el("p", "", text));
   if (action) box.appendChild(action);
@@ -128,16 +160,11 @@ function formatDate(iso) {
   });
 }
 
-const REVIEW_OUTCOME = {
-  mark_legit: "Revisado: era legítimo",
-  reject_quarantine: "Revisado: se dejó sin aislar",
-};
-
 function statusText(alert) {
   if (alert.status === "quarantined") return "En cuarentena";
   if (alert.reviewed) {
-    const human = alert.actions.filter((a) => REVIEW_OUTCOME[a.type]);
-    if (human.length) return REVIEW_OUTCOME[human[human.length - 1].type];
+    const human = lastHuman(alert);
+    if (human) return REVIEW_OUTCOME[human];
   }
   return STATUS_TEXT[alert.status];
 }
@@ -147,99 +174,320 @@ function actionLabel(action) {
   return ACTION_TEXT[action.type] || action.type;
 }
 
-// --- Alertas ------------------------------------------------------------------------------
-function renderAlert(alert) {
-  const card = el("details", "card " + alert.risk);
-  card.open = cardOpen.has(alert.id) ? cardOpen.get(alert.id) : alert.priority === 0;
-  card.addEventListener("toggle", () => cardOpen.set(alert.id, card.open));
-  const fila = el("summary", "fila");
-  fila.appendChild(el("span", "dominio", alert.sender_domain));
-  fila.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
-  fila.appendChild(el("span", "badge estado", statusText(alert)));
-  const meta = formatDate(alert.received_at) + (multiple && alert.mailbox_label ? " · " + alert.mailbox_label : "");
-  fila.appendChild(el("span", "muted meta", meta));
-  card.appendChild(fila);
-  const body = el("div", "detalle");
-  card.appendChild(body);
+function actorLabel(actor) {
+  if (actor === "sistema" || actor === "atalaya") return "Atalaya";
+  if (actor === "desconocido") return "Persona sin identificar";
+  if (actor === "admin-demo") return "Administración (demo)";
+  return actor;
+}
 
+// --- Navegacion entre vistas y paneles -------------------------------------------------------
+function setMenu(open, focus) {
+  document.body.classList.toggle("menu-abierto", open);
+  document.getElementById("menu-abrir").setAttribute("aria-expanded", String(open));
+  if (open && focus) document.querySelector("#menu .nav-btn[aria-current]").focus();
+  if (!open && focus) document.getElementById("menu-abrir").focus();
+}
+
+function showView(name) {
+  if (OLD_HASHES[name]) name = OLD_HASHES[name];
+  if (!VIEWS[name]) name = "panel";
+  currentView = name;
+  document.body.dataset.vista = name;
+  Object.keys(VIEWS).forEach((v) => {
+    document.getElementById("vista-" + v).hidden = v !== name;
+    const btn = document.getElementById("nav-" + v);
+    if (v === name) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
+  });
+  document.getElementById("titulo-vista").textContent = VIEWS[name];
+  document.title = VIEWS[name] + " — Atalaya";
+  if (name !== "panel") closeDetail(false);
+  document.body.classList.remove("menu-abierto");
+  document.getElementById("menu-abrir").setAttribute("aria-expanded", "false");
+  document.getElementById("contenido").scrollTop = 0;
+  if (window.location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+}
+document.querySelectorAll("#menu .nav-btn").forEach((b) => b.addEventListener("click", () => showView(b.dataset.vista)));
+document.getElementById("menu-abrir").addEventListener("click", () => setMenu(true, true));
+document.getElementById("menu-cerrar").addEventListener("click", () => setMenu(false, true));
+document.getElementById("velo").addEventListener("click", () => { setMenu(false, false); closeDetail(true); });
+
+let detOpener = null;
+function openDetail(id, opener) {
+  selectedId = id;
+  detOpener = opener || null;
+  renderList();
+  renderDetail();
+  document.body.classList.add("det-abierto");
+  cuerpoEl.scrollTop = 0;
+  if (!wide.matches) document.getElementById("detalle-cerrar").focus();
+}
+
+function closeDetail(restoreFocus) {
+  const had = document.body.classList.contains("det-abierto");
+  selectedId = null;
+  document.body.classList.remove("det-abierto");
+  if (currentView === "panel" && had) { renderList(); renderDetail(); }
+  if (restoreFocus && had && detOpener && detOpener.isConnected) detOpener.focus();
+  else if (restoreFocus && had) listaEl.querySelector(".fila-btn")?.focus();
+}
+document.getElementById("detalle-cerrar").addEventListener("click", () => closeDetail(true));
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+  if (document.body.classList.contains("menu-abierto")) setMenu(false, true);
+  else if (document.body.classList.contains("det-abierto") && !wide.matches) closeDetail(true);
+});
+wide.addEventListener("change", () => { if (wide.matches) document.body.classList.remove("det-abierto"); });
+
+// --- Lista de correos ----------------------------------------------------------------------
+function renderFilters() {
+  const box = document.getElementById("filtros");
+  box.replaceChildren();
+  FILTERS.forEach((f) => {
+    const n = lastAlerts.filter(f.match).length;
+    const b = el("button", "filtro " + f.cls);
+    b.type = "button";
+    b.append(document.createTextNode(f.label + " "), el("span", "n", String(n)));
+    b.setAttribute("aria-pressed", String(ui.filter === f.key));
+    b.addEventListener("click", () => { ui.filter = f.key; ui.limit = 40; renderList(); renderFilters(); });
+    box.appendChild(b);
+  });
+}
+
+function visibleAlerts() {
+  const f = FILTERS.find((x) => x.key === ui.filter) || FILTERS[0];
+  const q = norm(ui.query.trim());
+  return lastAlerts
+    .filter(f.match)
+    .filter((a) => !q || norm(a.sender_domain + " " + a.mailbox_label).includes(q))
+    .sort((a, b) => a.priority - b.priority || b.received_at.localeCompare(a.received_at));
+}
+
+function renderRow(a) {
+  const li = el("li", "fila-correo " + a.risk);
+  const b = el("button", "fila-btn");
+  b.type = "button";
+  if (a.id === selectedId) b.setAttribute("aria-current", "true");
+  const quien = el("span", "fila-quien");
+  quien.appendChild(el("span", "fila-dom", a.sender_domain));
+  quien.appendChild(el("span", "fila-meta", formatDate(a.received_at) + (a.mailbox_label ? " · " + a.mailbox_label : "")));
+  const badges = el("span", "fila-badges");
+  badges.appendChild(el("span", "badge " + a.risk, RISK_TEXT[a.risk]));
+  badges.appendChild(el("span", a.status === "pending_approval" ? "badge decidir" : "badge estado", statusText(a)));
+  const bar = el("span", "barra-puntaje");
+  const fill = el("span");
+  fill.style.setProperty("--w", Math.min(100, scoreOf(a)) + "%");
+  bar.appendChild(fill);
+  b.append(quien, badges, bar, el("span", "fila-puntaje", scoreOf(a) + " pts"));
+  b.addEventListener("click", (e) => openDetail(a.id, e.currentTarget));
+  li.appendChild(b);
+  return li;
+}
+
+function renderList() {
+  const items = visibleAlerts();
+  const shown = items.slice(0, ui.limit);
+  const nodes = shown.map(renderRow);
+  listaEl.replaceChildren(...nodes);
+  listaEl.removeAttribute("aria-busy");
+  const more = document.getElementById("correos-mas");
+  more.hidden = items.length <= shown.length;
+  more.textContent = "Mostrar más (" + (items.length - shown.length) + " restantes)";
+  document.getElementById("lista-resumen").textContent =
+    items.length ? "Mostrando " + shown.length + " de " + items.length + (items.length === 1 ? " correo." : " correos.") : "";
+  if (!lastAlerts.length) {
+    listaEl.appendChild(emptyState("✓", "Bandeja tranquila", filtroEl.value
+      ? "Este buzón no tiene correos por revisar."
+      : "Atalaya aún no ha marcado ningún correo. Cuando llegue uno sospechoso, aparecerá aquí con su explicación."));
+  } else if (!items.length) {
+    listaEl.appendChild(emptyState("⌕", "Ningún correo coincide", "Cambia el filtro o la búsqueda.",
+      button("Quitar filtros", "btn", () => { ui.filter = "all"; ui.query = ""; document.getElementById("buscar-correos").value = ""; renderFilters(); renderList(); })));
+  }
+}
+document.getElementById("buscar-correos").addEventListener("input", (e) => { ui.query = e.target.value; ui.limit = 40; renderList(); });
+document.getElementById("correos-mas").addEventListener("click", () => { ui.limit += 40; renderList(); });
+
+// --- Detalle del correo --------------------------------------------------------------------
+function detailEmpty() {
+  const box = el("div", "det-vacio");
+  box.appendChild(icon("shield-check"));
+  box.appendChild(el("strong", "", "Elige un correo de la lista"));
+  box.appendChild(el("p", "", "Aquí verás por qué Atalaya desconfía de él y qué puedes hacer."));
+  return box;
+}
+
+const AUTH_CODES = { SPF: "spf_fail", DKIM: "dkim_fail", DMARC: "dmarc_fail" };
+const SOURCE_TEXT = { ai: "Resumen con IA", simulated: "Resumen simulado (sin IA real)", rules: "Reglas de Atalaya" };
+
+function whyBlock(alert) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el("h3", "det-h", "¿Por qué Atalaya detectó esta amenaza?"));
   if (alert.explanation_source !== "rules") {
     const resumen = el("p", "resumen-ia");
-    resumen.appendChild(
-      el("span", "tag", alert.explanation_source === "ai" ? "Resumen con IA" : "Resumen simulado (sin IA real)"),
-    );
-    resumen.appendChild(document.createTextNode(" " + alert.explanation.replace(/^Resumen simulado:\s*/, "")));
-    body.appendChild(resumen);
+    resumen.appendChild(el("span", "tag", SOURCE_TEXT[alert.explanation_source] || "Resumen"));
+    resumen.appendChild(document.createTextNode(alert.explanation.replace(/^Resumen simulado:\s*/, "")));
+    frag.appendChild(resumen);
   }
-
   if (!alert.signals.length) {
-    body.appendChild(el("p", "porque", "Todo parece normal."));
-  } else {
-    const top = alert.signals.reduce((a, b) => (b.weight > a.weight ? b : a));
-    const why = el("p", "porque");
-    why.appendChild(el("strong", "", "Motivo: "));
-    why.appendChild(document.createTextNode(top.description));
-    body.appendChild(why);
-    const tech = el("details", "tecnico");
-    tech.appendChild(el("summary", "", "Detalle técnico (" + alert.signals.length + (alert.signals.length === 1 ? " señal" : " señales") + ")"));
-    const ul = el("ul", "signals");
-    alert.signals.forEach((s) => ul.appendChild(el("li", "", s.description + " (" + s.weight + " puntos)")));
-    tech.appendChild(ul);
-    body.appendChild(tech);
+    frag.appendChild(el("p", "nota", "Atalaya no encontró nada sospechoso en este correo."));
+    return frag;
   }
+  const ol = el("ol", "por-que");
+  alert.signals.slice().sort((a, b) => b.weight - a.weight).forEach((s) => {
+    const li = el("li", "", s.description);
+    li.appendChild(el("span", "peso", "+" + s.weight + " puntos"));
+    ol.appendChild(li);
+  });
+  frag.appendChild(ol);
+  frag.appendChild(el("p", "nota", "Los hechos (verificaciones SPF, DKIM, DMARC, dominios parecidos, enlaces) los calcula el código de Atalaya. La IA solo redacta el resumen."));
+  return frag;
+}
 
-  if (alert.status === "quarantined") {
-    body.appendChild(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja y te pide el motivo."));
+function timelineBlock(alert) {
+  const frag = document.createDocumentFragment();
+  if (!alert.actions.length) return frag;
+  frag.appendChild(el("h3", "det-h", "Qué pasó con este correo"));
+  const ul = el("ul", "linea");
+  alert.actions.forEach((a) => {
+    const li = el("li", "");
+    li.appendChild(el("span", "muted", formatDate(a.at) + " · "));
+    li.appendChild(el("strong", "", actorLabel(a.by) + ": "));
+    li.appendChild(document.createTextNode(actionLabel(a)));
+    if (a.reason) li.appendChild(el("div", "motivo", "Motivo: " + a.reason));
+    ul.appendChild(li);
+  });
+  frag.appendChild(ul);
+  return frag;
+}
+
+function techBlock(alert) {
+  const frag = document.createDocumentFragment();
+  const box = lastCoverage.find((c) => c.mailbox_id === alert.mailbox_id);
+  const dl = el("dl", "ficha");
+  const row = (k, v) => {
+    dl.appendChild(el("dt", "", k));
+    const dd = el("dd", "");
+    if (v instanceof Node) dd.appendChild(v); else dd.textContent = v;
+    dl.appendChild(dd);
+  };
+  row("Dominio del remitente", alert.sender_domain);
+  row("Buzón", box ? box.account : alert.mailbox_label || alert.mailbox_id);
+  row("Recibido", formatDate(alert.received_at));
+  row("Identificador", alert.message_ref);
+  row("Puntaje", scoreOf(alert) + " pts · " + RISK_TEXT[alert.risk]);
+  row("Estado", statusText(alert));
+  row("Explicación", SOURCE_TEXT[alert.explanation_source] || alert.explanation_source);
+  const auth = el("span", "");
+  Object.entries(AUTH_CODES).forEach(([name, code]) => {
+    const failed = alert.signals.some((s) => s.code === code);
+    auth.appendChild(el("span", "chip-auth " + (failed ? "falla" : "bien"), name + (failed ? " falló" : " sin alerta")));
+    auth.appendChild(document.createTextNode(" "));
+  });
+  row("Autenticación", auth);
+  frag.appendChild(dl);
+  if (alert.signals.length) {
+    frag.appendChild(el("h3", "det-h", "Señales (código · puntos)"));
+    const ul = el("ul", "linea");
+    alert.signals.forEach((s) => {
+      const li = el("li", "");
+      li.appendChild(el("span", "mono", s.code));
+      li.appendChild(document.createTextNode(" · " + s.weight + " pts"));
+      ul.appendChild(li);
+    });
+    frag.appendChild(ul);
   }
+  frag.appendChild(el("p", "nota", "Atalaya no guarda el asunto, el cuerpo, los enlaces ni los adjuntos: solo estos datos."));
+  return frag;
+}
 
-  const actions = el("div", "actions");
-  if (!readOnly && alert.status !== "quarantined") {
-    const needs = alert.quarantine_needs_reason;
+function actionButtons(alert) {
+  const actions = el("div", "det-acciones");
+  if (readOnly) return actions;
+  if (alert.status !== "quarantined") {
     actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-main" : "btn", (e) =>
       act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.",
-        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null, e.currentTarget)));
+        alert.quarantine_needs_reason ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null, e.currentTarget)));
   }
-  if (!readOnly && alert.status === "pending_approval") {
+  if (alert.status === "pending_approval") {
     actions.appendChild(button("Dejarlo donde está", "btn", (e) =>
       act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.",
         { title: "Dejarlo donde está", help: "Atalaya lo marcó como riesgo alto y vas a dejarlo en la bandeja. Explica por qué: queda en el informe del correo." }, e.currentTarget)));
   }
-  if (!readOnly && (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed"))) {
+  if (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed")) {
     const restoring = alert.status === "quarantined";
     actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-ok", (e) =>
       act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.",
         { title: restoring ? "Sacar de cuarentena" : "Es legítimo",
           help: restoring ? "Vas a devolver el correo a la bandeja. Explica por qué no era peligroso: queda en el informe del correo." : "Explica por qué este correo es legítimo: queda en el informe del correo." }, e.currentTarget)));
   }
-  const reportUrl = "/api/alerts/" + encodeURIComponent(alert.id) + "/report";
-  const view = el("a", "btn btn-ghost", "Ver informe");
-  view.href = reportUrl;
-  view.target = "_blank";
-  view.rel = "noopener";
-  actions.appendChild(view);
-  const pdf = el("a", "btn btn-ghost", "Descargar PDF");
-  pdf.href = reportUrl + "?formato=pdf&download=true";
-  pdf.setAttribute("download", "");
-  actions.appendChild(pdf);
-  const download = el("a", "btn btn-ghost", "Descargar texto");
-  download.href = reportUrl + "?download=true";
-  download.setAttribute("download", "");
-  actions.appendChild(download);
-  body.appendChild(actions);
+  return actions;
+}
 
-  if (alert.actions.length) {
-    const ul = el("ul", "linea");
-    alert.actions.forEach((a) => {
-      const li = el("li", "");
-      const who = a.by === "atalaya" ? "Atalaya" : actorLabel(a.by);
-      li.appendChild(el("span", "muted", formatDate(a.at) + " · "));
-      li.appendChild(el("strong", "", who + ": "));
-      li.appendChild(document.createTextNode(actionLabel(a)));
-      if (a.reason) li.appendChild(el("div", "motivo", "Motivo: " + a.reason));
-      ul.appendChild(li);
-    });
-    body.appendChild(ul);
+function renderDetail() {
+  const alert = allAlerts.find((a) => a.id === selectedId);
+  if (!alert) { selectedId = null; cuerpoEl.replaceChildren(detailEmpty()); return; }
+  const nodes = [];
+  const cab = el("div", "det-cab");
+  cab.appendChild(el("span", "badge " + alert.risk, RISK_TEXT[alert.risk]));
+  cab.appendChild(el("span", alert.status === "pending_approval" ? "badge decidir" : "badge estado", statusText(alert)));
+  cab.appendChild(el("span", "det-puntaje", "Puntaje " + scoreOf(alert) + " pts"));
+  nodes.push(cab);
+  const titulo = el("h2", "det-titulo", alert.sender_domain);
+  titulo.id = "det-titulo";
+  titulo.tabIndex = -1;
+  nodes.push(titulo);
+  nodes.push(el("p", "det-sub", formatDate(alert.received_at) + (alert.mailbox_label ? " · " + alert.mailbox_label : "")));
+  if (readOnly) {
+    const ro = el("p", "det-solo-lectura");
+    ro.appendChild(icon("eye"));
+    ro.appendChild(el("span", "", "Solo lectura: puedes ver el informe, pero no decidir."));
+    nodes.push(ro);
   }
-  return card;
+  nodes.push(actionButtons(alert));
+  if (alert.status === "quarantined") {
+    nodes.push(el("p", "nota", "Este correo está fuera de la bandeja, bajo la etiqueta «Sospechoso». «Sacar de cuarentena» lo devuelve a la bandeja y te pide el motivo."));
+  }
+  const reportUrl = "/api/alerts/" + encodeURIComponent(alert.id) + "/report";
+  const informes = el("div", "det-informes");
+  informes.appendChild(linkButton("Ver informe", reportUrl, "btn btn-ghost", false));
+  informes.appendChild(linkButton("Descargar PDF", reportUrl + "?formato=pdf&download=true", "btn btn-ghost", true));
+  informes.appendChild(linkButton("Descargar texto", reportUrl + "?download=true", "btn btn-ghost", true));
+  nodes.push(informes);
+
+  // Pestanas del detalle: lo sencillo primero; el detalle tecnico, detras de una pestana
+  const tabs = el("div", "tabs-det");
+  tabs.setAttribute("role", "tablist");
+  tabs.setAttribute("aria-label", "Secciones del correo");
+  const panel = el("div", "det-panel");
+  panel.setAttribute("role", "tabpanel");
+  panel.id = "det-panel";
+  const tabDefs = [["analisis", "Análisis"], ["ficha", "Ficha técnica"]];
+  const fill = () => {
+    panel.setAttribute("aria-labelledby", "tab-det-" + detTab);
+    panel.replaceChildren(...(detTab === "analisis" ? [whyBlock(alert), timelineBlock(alert)] : [techBlock(alert)]));
+  };
+  tabDefs.forEach(([key, label]) => {
+    const t = el("button", "tab-det", label);
+    t.type = "button";
+    t.id = "tab-det-" + key;
+    t.setAttribute("role", "tab");
+    t.setAttribute("aria-controls", "det-panel");
+    const sync = () => { t.setAttribute("aria-selected", String(detTab === key)); t.tabIndex = detTab === key ? 0 : -1; };
+    sync();
+    t.addEventListener("click", () => { detTab = key; tabs.querySelectorAll("[role=tab]").forEach((x) => x.dispatchEvent(new Event("sync"))); fill(); });
+    t.addEventListener("sync", sync);
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const other = tabDefs.find(([k]) => k !== key)[0];
+      document.getElementById("tab-det-" + other).click();
+      document.getElementById("tab-det-" + other).focus();
+    });
+    tabs.appendChild(t);
+  });
+  fill();
+  nodes.push(tabs, panel);
+  cuerpoEl.replaceChildren(...nodes);
 }
 
 // --- Motivo escrito de una decision ---------------------------------------------------------
@@ -289,6 +537,7 @@ async function act(id, verb, okMessage, reasonSpec, btn) {
       say(okMessage, "ok");
       await load();
     });
+    document.getElementById("det-titulo")?.focus(); // el boton pulsado ya no existe: el foco no se pierde
   } catch (err) {
     say(err.message, "error");
   }
@@ -305,35 +554,74 @@ function renderCoverage(coverage) {
   } else {
     covEl.appendChild(el("span", "ok", "● Vigilando " + coverage.length + (coverage.length === 1 ? " buzón" : " buzones")));
   }
-
-  buzonesEl.replaceChildren();
-  const lq = document.getElementById("buscar-lista").value.trim();
-  document.getElementById("lista-buscar").hidden = coverage.length < 8;
-  const listed = coverage.filter((c) => matches(c, lq));
-  const moreList = document.getElementById("lista-mas");
-  moreList.hidden = listed.length <= view.listaLimit;
-  moreList.textContent = "Mostrar más (" + Math.max(0, listed.length - view.listaLimit) + " restantes)";
-  listed.slice(0, view.listaLimit).forEach((c) => {
-    const ok = c.status === "connected";
-    const li = el("li", "buzon");
-    const info = el("div", "info");
-    info.appendChild(el("strong", "", c.label));
-    info.appendChild(el("span", "muted", " · " + c.account));
-    li.appendChild(info);
-    li.appendChild(el("span", "badge " + (ok ? "low" : "medium"), ok ? "Vigilado" : "Sin cobertura"));
-    if (!readOnly) li.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
-    buzonesEl.appendChild(li);
-  });
-  if (!coverage.length) buzonesEl.appendChild(emptyState("✉", "Todavía no hay buzones", "Cada persona conecta su correo con un enlace tuyo. Pulsa «Invitar buzón» arriba para crear el primero."));
-  else if (!listed.length) buzonesEl.appendChild(emptyState("⌕", "Ningún buzón coincide", "Prueba con otro nombre o cuenta."));
-
-  // filtro: conserva la seleccion
+  // filtro de buzon: conserva la seleccion
   const selected = filtroEl.value;
   filtroEl.replaceChildren(new Option("Todos los buzones", ""));
   coverage.forEach((c) => filtroEl.appendChild(new Option(c.label, c.mailbox_id)));
   filtroEl.value = coverage.some((c) => c.mailbox_id === selected) ? selected : "";
   multiple = coverage.length > 1;
   lastCoverage = coverage;
+}
+
+function timeAgo(iso) {
+  if (!iso) return "sin comprobar";
+  const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 60) return "hace unos segundos";
+  if (secs < 3600) return "hace " + Math.round(secs / 60) + " min";
+  return "hace " + Math.round(secs / 3600) + " h";
+}
+
+function renderMailboxes() {
+  const list = document.getElementById("buzones");
+  list.replaceChildren();
+  const q = document.getElementById("buscar-lista").value.trim();
+  const onlyAttention = document.getElementById("solo-atencion").checked;
+  document.getElementById("buzones-buscar").hidden = lastCoverage.length < 8;
+  const byBox = new Map();
+  allAlerts.forEach((a) => { if (!byBox.has(a.mailbox_id)) byBox.set(a.mailbox_id, []); byBox.get(a.mailbox_id).push(a); });
+  const pending = (c) => (byBox.get(c.mailbox_id) || []).filter((a) => a.priority <= 1).length;
+  const need = (c) => pending(c) + (c.status !== "connected" ? 1000 : 0);
+  const shown = lastCoverage
+    .filter((c) => matches(c, q) && (!onlyAttention || need(c) > 0))
+    .sort((a, b) => need(b) - need(a) || a.label.localeCompare(b.label, "es")); // lo urgente primero
+  const page = shown.slice(0, ui.listaLimit);
+  const more = document.getElementById("lista-mas");
+  more.hidden = shown.length <= page.length;
+  more.textContent = "Mostrar más (" + (shown.length - page.length) + " restantes)";
+  const note = document.getElementById("lista-mas-nota");
+  note.hidden = lastCoverage.length <= PAGE;
+  note.textContent = "Mostrando " + page.length + " de " + lastCoverage.length + " buzones, los que necesitan atención primero.";
+  page.forEach((c) => {
+    const ok = c.status === "connected";
+    const mine = byBox.get(c.mailbox_id) || [];
+    const decide = mine.filter((a) => a.priority === 0).length;
+    const review = mine.filter((a) => a.priority === 1).length;
+    const li = el("li", "buzon" + (ok ? "" : " sin-cobertura"));
+    const info = el("div", "info");
+    info.appendChild(el("strong", "", c.label));
+    info.appendChild(el("span", "cuenta", c.account));
+    const counts = el("div", "cuentas");
+    if (decide) counts.appendChild(el("span", "urgente", decide + (decide === 1 ? " por decidir" : " por decidir")));
+    if (review) counts.appendChild(el("span", "", review + " para revisar"));
+    if (!decide && !review) counts.appendChild(el("span", "", mine.length ? "Sin correos pendientes" : "Sin correos todavía"));
+    counts.appendChild(el("span", "", "Último chequeo: " + timeAgo(c.last_check)));
+    info.appendChild(counts);
+    li.appendChild(info);
+    const acc = el("div", "acciones");
+    acc.appendChild(el("span", "badge " + (ok ? "ok" : "medium"), ok ? "Vigilado" : "Sin cobertura"));
+    acc.appendChild(button("Ver sus correos", "btn btn-ghost", () => focusMailbox(c.mailbox_id)));
+    if (!readOnly) acc.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
+    li.appendChild(acc);
+    list.appendChild(li);
+  });
+  if (!lastCoverage.length) list.appendChild(emptyState("✉", "Todavía no hay buzones", "Cada persona conecta su correo con un enlace tuyo. Pulsa «Invitar buzón» para crear el primero."));
+  else if (!page.length) list.appendChild(emptyState("⌕", "Ningún buzón coincide", "Cambia la búsqueda o quita el filtro «solo los que necesitan atención»."));
+}
+
+function focusMailbox(id) {
+  filtroEl.value = id;
+  applyFilter();
+  showView("panel");
 }
 
 async function disconnect(box) {
@@ -354,19 +642,20 @@ const SECURITY_TEXT = {
 };
 
 async function loadSecurity() {
-  const events = await api("/api/security/events");
+  const evs = await api("/api/security/events");
   const list = document.getElementById("eventos-seguridad");
   list.replaceChildren();
-  events.slice(0, 6).forEach((e) => {
+  evs.slice(0, 6).forEach((e) => {
     const li = el("li", "");
     li.appendChild(el("strong", "", (SECURITY_TEXT[e.kind] || e.kind) + " "));
     li.appendChild(el("span", "muted", "· " + formatDate(e.at)));
     li.appendChild(el("div", "muted", e.detail));
     list.appendChild(li);
   });
-  document.getElementById("seguridad").hidden = !events.length;
+  document.getElementById("seguridad").hidden = !evs.length;
 }
 
+// --- Historial y exportacion a CSV ------------------------------------------------------------
 const ACTIVITY_TEXT = {
   admin_login: "Inició sesión",
   admin_login_failed: "Intento de acceso fallido",
@@ -383,35 +672,82 @@ const ACTIVITY_TEXT = {
   alert_legit: "Sacó un correo de cuarentena o lo marcó como legítimo",
 };
 
-function actorLabel(actor) {
-  if (actor === "sistema") return "Atalaya";
-  if (actor === "desconocido") return "Persona sin identificar";
-  if (actor === "admin-demo") return "Administración (demo)";
-  return actor;
-}
-
-async function loadHistory() {
-  const events = await api("/api/audit");
+function renderHistory() {
   const list = document.getElementById("historial");
   list.replaceChildren();
-  events.slice(0, 25).forEach((e) => {
+  events.slice(0, ui.historyLimit).forEach((e) => {
     const li = el("li", "evento");
     li.appendChild(el("span", "muted hora-ev", formatDate(e.at)));
-    li.appendChild(el("strong", "", " " + (ACTIVITY_TEXT[e.action] || e.action)));
+    li.appendChild(el("strong", "", ACTIVITY_TEXT[e.action] || e.action));
     li.appendChild(el("span", "muted", " · " + actorLabel(e.actor) + (e.detail ? " · " + e.detail : "")));
     list.appendChild(li);
   });
+  const more = document.getElementById("historial-mas");
+  more.hidden = events.length <= ui.historyLimit;
+  more.textContent = "Mostrar más (" + (events.length - ui.historyLimit) + " restantes)";
   if (!events.length) list.appendChild(emptyState("☰", "Todavía no hay actividad", "Aquí verás qué se hizo, quién y cuándo en cuanto alguien entre, invite o decida sobre un correo."));
 }
+document.getElementById("historial-mas").addEventListener("click", () => { ui.historyLimit += 40; renderHistory(); });
 
+// Una celda de CSV nunca debe poder interpretarse como formula al abrirla en una hoja de calculo
+function csvCell(value) {
+  let t = String(value === null || value === undefined ? "" : value);
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
+  return '"' + t.replace(/"/g, '""') + '"';
+}
+
+async function exportCsv(btn) {
+  try {
+    await busy(btn, async () => {
+      const fresh = await api("/api/audit");
+      const rows = [["tipo", "fecha", "quien", "que_paso", "detalle", "correo_id", "dominio_remitente", "motivo"]];
+      fresh.forEach((e) => rows.push(["actividad", e.at, actorLabel(e.actor), ACTIVITY_TEXT[e.action] || e.action, e.detail || "", "", "", ""]));
+      allAlerts.forEach((a) => a.actions
+        .filter((x) => ACTION_TEXT[x.type])
+        .forEach((x) => rows.push(["decision", x.at, actorLabel(x.by), ACTION_TEXT[x.type], "", a.id, a.sender_domain, x.reason || ""])));
+      const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const a = el("a");
+      a.href = url;
+      a.download = "atalaya-historial-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      say("Historial exportado a CSV (" + (rows.length - 1) + " filas). No se guardó nada nuevo.", "ok");
+    });
+  } catch (err) {
+    say(err.message, "error");
+  }
+}
+document.getElementById("exportar-csv").addEventListener("click", (e) => exportCsv(e.currentTarget));
+
+// --- Como se calcula el riesgo (solo lectura) -------------------------------------------------
+function renderPolicy() {
+  const { medium, high } = policy;
+  document.getElementById("pol-alta").textContent = "≥ " + high + " puntos";
+  document.getElementById("pol-media").textContent = medium + " a " + (high - 1) + " puntos";
+  document.getElementById("pol-baja").textContent = "menos de " + medium + " puntos";
+  const total = Math.max(100, high + 20); // la regla muestra 0 a 100 puntos; arriba de eso sigue siendo alto
+  const set = (id, from, to) => document.getElementById(id).style.setProperty("--w", ((to - from) / total) * 100 + "%");
+  set("regla-baja", 0, medium);
+  set("regla-media", medium, high);
+  set("regla-alta", high, total);
+  document.getElementById("kpi-alta-sub").textContent = "puntaje ≥ " + high;
+  document.getElementById("kpi-media-sub").textContent = "puntaje " + medium + "–" + (high - 1);
+  document.getElementById("kpi-baja-sub").textContent = "puntaje < " + medium;
+}
+
+// --- Carga de datos ---------------------------------------------------------------------------
 async function load() {
-  loadHistory().catch(() => {});
+  api("/api/audit").then((e) => { events = e; renderHistory(); }).catch(() => {});
   if (authRequired) loadSecurity().catch(() => {});
   const coverage = await api("/api/coverage");
   renderCoverage(coverage);
   allAlerts = await api("/api/alerts");
   campaignList = await api("/api/campaigns").catch(() => []);
   applyFilter();
+  renderMailboxes();
 }
 
 function applyFilter() {
@@ -428,7 +764,9 @@ function applyFilter() {
   }
   renderSummary();
   renderCampaigns();
-  render();
+  renderFilters();
+  renderList();
+  renderDetail();
 }
 
 // --- Campanas: el mismo ataque en varios buzones ---------------------------------------------
@@ -441,7 +779,7 @@ function renderCampaigns() {
     const card = el("div", "campana " + c.risk);
     const info = el("div", "info");
     info.appendChild(el("strong", "", "1 campaña en " + c.mailbox_count + " buzones"));
-    info.appendChild(el("span", "muted", " · " + c.sender_domain));
+    info.appendChild(el("span", "muted mono", " · " + c.sender_domain));
     info.appendChild(el("div", "muted", c.mailboxes.join(", ")));
     card.appendChild(info);
     const n = c.actionable;
@@ -472,21 +810,7 @@ async function actCampaign(c, okMessage, btn) {
   }
 }
 
-// --- Resumen de la organizacion --------------------------------------------------------------
-function timeAgo(iso) {
-  if (!iso) return "sin comprobar";
-  const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
-  if (secs < 60) return "hace unos segundos";
-  if (secs < 3600) return "hace " + Math.round(secs / 60) + " min";
-  return "hace " + Math.round(secs / 3600) + " h";
-}
-
-function focusMailbox(id) {
-  filtroEl.value = id;
-  applyFilter();
-  showTab("correos");
-}
-
+// --- Estado y cifras del panel ----------------------------------------------------------------
 // Lo mas importante primero: cuantos correos esperan una decision (rojo solo si hay riesgo alto)
 function setEstado(kind, num, title, detail, action) {
   const box = document.getElementById("estado");
@@ -499,10 +823,14 @@ function setEstado(kind, num, title, detail, action) {
 }
 
 function goDecide() {
+  showView("panel");
   ui.filter = "all";
-  showTab("correos");
-  const target = document.getElementById("grupo-decidir") || document.getElementById("grupo-revisar") || alertsEl;
-  target.scrollIntoView({ block: "start" });
+  ui.query = "";
+  document.getElementById("buscar-correos").value = "";
+  renderFilters();
+  renderList();
+  const first = listaEl.querySelector(".fila-btn");
+  if (first) first.focus();
 }
 
 function renderEstado(decide, review) {
@@ -527,155 +855,24 @@ function showLoadError(err) {
   setEstado("error", "!", "No pudimos cargar el panel",
     (err && err.message ? err.message + " " : "") + "Comprueba tu conexión e inténtalo otra vez.",
     button("Reintentar", "btn btn-main", () => { load().then(() => say("Listo: el panel se cargó.", "ok")).catch(showLoadError); }));
-  document.getElementById("resumen-cards").replaceChildren();
+  listaEl.replaceChildren();
 }
 
 function renderSummary() {
-  const head = document.getElementById("resumen-org");
-  const cards = document.getElementById("resumen-cards");
   const decide = allAlerts.filter((a) => a.priority === 0).length;
   const pend = allAlerts.filter((a) => a.priority <= 1).length;
-  const uncovered = lastCoverage.filter((c) => c.status !== "connected").length;
   renderEstado(decide, pend - decide);
-  head.replaceChildren();
-  if (uncovered) {
-    head.appendChild(el("p", "resumen aviso", uncovered + (uncovered === 1 ? " buzón está" : " buzones están") + " sin cobertura: Atalaya no puede vigilarlos hasta que se vuelvan a conectar."));
-  }
   const badge = document.getElementById("n-correos");
   badge.textContent = String(pend);
   badge.classList.toggle("sin-n", pend === 0);
   badge.classList.toggle("urgente", decide > 0);
-
-  cards.replaceChildren();
-  const q = document.getElementById("buscar-resumen").value.trim();
-  const onlyAttention = document.getElementById("solo-atencion").checked;
-  document.getElementById("resumen-buscar").hidden = lastCoverage.length < 8;
-  const byBox = new Map();
-  allAlerts.forEach((a) => { if (!byBox.has(a.mailbox_id)) byBox.set(a.mailbox_id, []); byBox.get(a.mailbox_id).push(a); });
-  const need = (c) => (byBox.get(c.mailbox_id) || []).filter((a) => a.priority <= 1).length + (c.status !== "connected" ? 1000 : 0);
-  const shown = lastCoverage
-    .filter((c) => matches(c, q) && (!onlyAttention || need(c) > 0))
-    .sort((a, b) => need(b) - need(a) || a.label.localeCompare(b.label, "es")); // lo urgente primero
-  const page = shown.slice(0, view.resumenLimit);
-  const more = document.getElementById("resumen-mas");
-  more.hidden = shown.length <= page.length;
-  more.textContent = "Mostrar más buzones (" + (shown.length - page.length) + " restantes)";
-  const note = document.getElementById("resumen-mas-nota");
-  note.hidden = lastCoverage.length <= PAGE;
-  note.textContent = "Mostrando " + page.length + " de " + lastCoverage.length + " buzones, los que necesitan atención primero.";
-  page.forEach((c) => {
-    const mine = byBox.get(c.mailbox_id) || [];
-    const ok = c.status === "connected";
-    const card = el("button", "cbuzon" + (ok ? "" : " sin-cobertura"));
-    card.type = "button";
-    card.title = "Ver los correos de " + c.label;
-    card.addEventListener("click", () => focusMailbox(c.mailbox_id));
-    const top = el("div", "cb-top");
-    top.appendChild(el("strong", "", c.label));
-    top.appendChild(el("span", "badge " + (ok ? "low" : "medium"), ok ? "Con cobertura" : "Sin cobertura"));
-    card.appendChild(top);
-    card.appendChild(el("div", "muted cb-cuenta", c.account));
-    const counts = el("div", "cb-cuentas");
-    let any = false;
-    GROUPS.forEach((g) => {
-      const n = mine.filter((a) => g.match(a)).length;
-      if (!n) return;
-      any = true;
-      counts.appendChild(el("span", "cnt" + (g.urgent ? " urgente" : ""), n + " " + g.short.toLowerCase()));
-    });
-    if (!any) counts.appendChild(el("span", "muted", "Sin correos todavía"));
-    card.appendChild(counts);
-    card.appendChild(el("div", "muted cb-chequeo", "Último chequeo: " + timeAgo(c.last_check)));
-    cards.appendChild(card);
+  // Cifras reales: conteos de las alertas que Atalaya guarda
+  document.getElementById("kpi-total").textContent = String(lastAlerts.length);
+  document.getElementById("kpi-total-sub").textContent = lastAlerts.length === 1 ? "correo revisado" : "correos revisados";
+  ["high", "medium", "low"].forEach((r, i) => {
+    document.getElementById("kpi-" + ["alta", "media", "baja"][i]).textContent = String(lastAlerts.filter((a) => a.risk === r).length);
   });
-  cards.removeAttribute("aria-busy");
-  if (!lastCoverage.length) cards.appendChild(emptyState("✉", "Todavía no hay buzones", "Ve a «Buzones» y pulsa «Invitar buzón» para conectar el primero.", button("Ir a Buzones", "btn", () => showTab("buzones"))));
-  else if (!page.length) cards.appendChild(emptyState("⌕", "Ningún buzón coincide", "Cambia la búsqueda o quita el filtro «solo los que necesitan atención»."));
 }
-
-function renderChips() {
-  const chips = document.getElementById("chips");
-  chips.replaceChildren();
-  const make = (key, text, urgent) => {
-    const b = button(text, "chip" + (urgent ? " urgente" : ""), () => {
-      ui.filter = ui.filter === key ? "all" : key;
-      render();
-      if (ui.filter !== "all") document.getElementById("alertas").scrollIntoView({ block: "start" });
-    });
-    b.setAttribute("aria-pressed", String(ui.filter === key));
-    chips.appendChild(b);
-  };
-  make("all", "Todos (" + lastAlerts.length + ")", false);
-  GROUPS.forEach((g) => {
-    const n = lastAlerts.filter((a) => g.match(a)).length;
-    if (n) make(g.key, g.short + " " + n, g.urgent);
-  });
-  document.getElementById("controles").hidden = lastAlerts.length === 0;
-}
-
-function render() {
-  const alerts = lastAlerts;
-  renderChips();
-  const pendientes = alerts.filter((a) => a.priority <= 1).length;
-  const urgentes = alerts.filter((a) => a.priority === 0).length;
-  const nodes = [
-    pendientes
-      ? el("p", "resumen " + (urgentes ? "urgente" : "aviso"), pendientes + (pendientes === 1 ? " correo requiere" : " correos requieren") + " tu atención" + (urgentes ? ": " + urgentes + " con riesgo alto esperando tu decisión." : "."))
-      : el("p", "resumen ok", "Nada pendiente: no hay correos que requieran tu atención."),
-  ];
-  GROUPS.forEach((g) => {
-    const items = alerts.filter((a) => g.match(a));
-    if (!items.length) return;
-    if (ui.filter !== "all" && ui.filter !== g.key) return;
-    const isCollapsed = ui.filter === g.key ? false : (g.key in ui.collapsed ? ui.collapsed[g.key] : g.collapsed);
-    const section = el("section", "grupo-sec");
-    section.id = "grupo-" + g.key;
-    const h = el("h3", "grupo" + (g.urgent ? " urgente" : ""));
-    const body = el("div", "grupo-cuerpo");
-    body.hidden = isCollapsed;
-    const toggle = button("", "grupo-btn", () => {
-      const nowCollapsed = !body.hidden;
-      body.hidden = nowCollapsed;
-      ui.collapsed[g.key] = nowCollapsed;
-      toggle.setAttribute("aria-expanded", String(!nowCollapsed));
-      chev.textContent = nowCollapsed ? "▸" : "▾";
-      saveUi();
-    });
-    const chev = el("span", "chev", isCollapsed ? "▸" : "▾");
-    toggle.setAttribute("aria-expanded", String(!isCollapsed));
-    toggle.setAttribute("aria-controls", section.id + "-cuerpo");
-    body.id = section.id + "-cuerpo";
-    toggle.append(chev, document.createTextNode(" " + g.title + " "), el("span", "n", "(" + items.length + ")"));
-    h.appendChild(toggle);
-    const limit = view.groupLimit[g.key] || 40;
-    items.slice(0, limit).forEach((a) => body.appendChild(renderAlert(a)));
-    if (items.length > limit) {
-      body.appendChild(button("Mostrar más (" + (items.length - limit) + " restantes)", "btn btn-ghost", () => {
-        view.groupLimit[g.key] = limit + 40;
-        render();
-      }));
-    }
-    section.append(h, body);
-    nodes.push(section);
-  });
-  alertsEl.replaceChildren(...nodes);
-  if (!alerts.length) {
-    alertsEl.appendChild(emptyState("✓", "Bandeja tranquila", filtroEl.value
-      ? "Este buzón no tiene correos por revisar."
-      : "Atalaya aún no ha marcado ningún correo. Cuando llegue uno sospechoso, aparecerá aquí con su explicación."));
-  }
-}
-
-document.getElementById("expandir").addEventListener("click", () => {
-  lastAlerts.forEach((a) => cardOpen.set(a.id, true));
-  GROUPS.forEach((g) => { ui.collapsed[g.key] = false; });
-  saveUi();
-  render();
-});
-document.getElementById("contraer").addEventListener("click", () => {
-  lastAlerts.forEach((a) => cardOpen.set(a.id, false));
-  render();
-});
 
 // --- Invitaciones --------------------------------------------------------------------------
 const dlg = document.getElementById("dlg-invitar");
@@ -744,39 +941,15 @@ document.getElementById("inv-cerrar").addEventListener("click", async () => {
   await load().catch(() => {});
 });
 
-// --- Pestanas ------------------------------------------------------------------------------
-const TABS = ["resumen", "correos", "buzones", "historial"];
-function showTab(name, focusTab) {
-  if (!TABS.includes(name)) name = "resumen";
-  TABS.forEach((t) => {
-    const selected = t === name;
-    const tab = document.getElementById("tab-" + t);
-    tab.setAttribute("aria-selected", String(selected));
-    tab.tabIndex = selected ? 0 : -1;
-    document.getElementById("panel-" + t).hidden = !selected;
-    if (selected && focusTab) tab.focus();
-  });
-  if (window.location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
-}
-document.querySelectorAll(".tabs [role=tab]").forEach((tab) => {
-  tab.addEventListener("click", () => showTab(tab.dataset.tab));
-  tab.addEventListener("keydown", (event) => {
-    const i = TABS.indexOf(tab.dataset.tab);
-    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (step) { event.preventDefault(); showTab(TABS[(i + step + TABS.length) % TABS.length], true); }
-  });
-});
-showTab(window.location.hash.slice(1));
-
 // --- Guia de primera visita (demo): 3 pasos, se puede cerrar y volver a abrir ---------------
 const TOUR_KEY = "atalaya-guia";
 const TOUR_STEPS = [
   { title: "Mira la campaña", text: "El mismo correo falso llegó a varios buzones a la vez. Atalaya lo detecta y lo agrupa en una sola alerta.", cta: "Ver la campaña",
-    go: () => { showTab("correos"); const c = document.getElementById("campanas"); (c.hidden ? alertsEl : c).scrollIntoView({ block: "center" }); } },
+    go: () => { showView("panel"); const c = document.getElementById("campanas"); (c.hidden ? listaEl : c).scrollIntoView({ block: "center" }); } },
   { title: "Aíslala con tu aprobación", text: "Pulsa el botón de la campaña para poner todos esos correos en cuarentena. Nada se borra y puedes deshacerlo.", cta: "Ir al botón",
-    go: () => { showTab("correos"); const b = document.querySelector("#campanas .btn"); if (b) { b.scrollIntoView({ block: "center" }); b.focus(); } else say("No hay campañas activas. Usa «Reiniciar demostración» para verla otra vez."); } },
+    go: () => { showView("panel"); const b = document.querySelector("#campanas .btn"); if (b) { b.scrollIntoView({ block: "center" }); b.focus(); } else say("No hay campañas activas. Usa «Reiniciar demostración» para verla otra vez."); } },
   { title: "Cambia a supervisor", text: "Mira cómo se ve el panel para alguien que solo puede leer: no puede aprobar ni invitar.", cta: "Ver como supervisor",
-    go: () => { const b = document.getElementById("btn-rol"); if (b && !b.hidden) { b.scrollIntoView({ block: "center" }); b.focus(); } } },
+    go: () => { setMenu(true, false); const b = document.getElementById("btn-rol"); if (b && !b.hidden) b.focus(); } },
 ];
 function loadTour() {
   try { return Object.assign({ done: [], closed: false }, JSON.parse(localStorage.getItem(TOUR_KEY) || "{}")); }
@@ -828,12 +1001,11 @@ document.getElementById("guia").addEventListener("keydown", (e) => {
 });
 
 // --- Arranque ------------------------------------------------------------------------------
-filtroEl.addEventListener("change", applyFilter);
-document.getElementById("buscar-resumen").addEventListener("input", () => { view.resumenLimit = PAGE; renderSummary(); });
-document.getElementById("solo-atencion").addEventListener("change", () => { view.resumenLimit = PAGE; renderSummary(); });
-document.getElementById("resumen-mas").addEventListener("click", () => { view.resumenLimit += PAGE; renderSummary(); });
-document.getElementById("buscar-lista").addEventListener("input", () => { view.listaLimit = PAGE; renderCoverage(lastCoverage); });
-document.getElementById("lista-mas").addEventListener("click", () => { view.listaLimit += PAGE; renderCoverage(lastCoverage); });
+filtroEl.addEventListener("change", () => { ui.limit = 40; applyFilter(); });
+document.getElementById("buscar-lista").addEventListener("input", () => { ui.listaLimit = PAGE; renderMailboxes(); });
+document.getElementById("solo-atencion").addEventListener("change", () => { ui.listaLimit = PAGE; renderMailboxes(); });
+document.getElementById("lista-mas").addEventListener("click", () => { ui.listaLimit += PAGE; renderMailboxes(); });
+window.addEventListener("hashchange", () => showView(window.location.hash.slice(1)));
 
 document.getElementById("reset").addEventListener("click", async () => {
   try {
@@ -851,6 +1023,10 @@ document.getElementById("btn-salir").addEventListener("click", async () => {
 });
 
 async function init() {
+  showView(window.location.hash.slice(1));
+  listaEl.setAttribute("aria-busy", "true");
+  for (let i = 0; i < 4; i++) { const sk = el("li", "fila-correo esqueleto"); sk.setAttribute("aria-hidden", "true"); listaEl.appendChild(sk); }
+  detalleEl.querySelector("#detalle-cuerpo").replaceChildren(detailEmpty());
   const health = await (await fetch("/health")).json();
   mode = health.mode;
   authRequired = health.auth;
@@ -868,6 +1044,7 @@ async function init() {
       yo.hidden = false;
     }).catch(() => {});
   }
+  api("/api/policy").then((p) => { policy = p; renderPolicy(); }).catch(() => renderPolicy());
   const who = await api("/api/whoami").catch(() => ({ role: "admin", demo_roles: false }));
   readOnly = who.role === "supervisor";
   if (readOnly) {
@@ -890,11 +1067,8 @@ async function init() {
       }
     });
   }
-  document.body.classList.add("listo"); // ya se sabe si hay boton de rol: se libera el espacio reservado
   startTour(mode === "demo" && !readOnly && !!who.demo_roles);
   await load();
-  document.body.classList.add("animar"); // entrada suave solo al abrir, no en cada refresco
-  setTimeout(() => document.body.classList.remove("animar"), 1200);
 }
 
-init().catch((err) => { document.body.classList.add("listo"); showLoadError(err); });
+init().catch((err) => { showLoadError(err); });
