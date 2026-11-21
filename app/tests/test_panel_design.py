@@ -29,7 +29,7 @@ def test_header_reserves_its_space_so_the_page_does_not_jump():
     # Un elemento con `hidden` desaparece (display:none !important) y al aparecer empuja
     # todo lo de abajo. El boton de rol y la insignia de pendientes ocupan su sitio siempre.
     html = (STATIC / "index.html").read_text(encoding="utf-8")
-    rol = re.search(r'<button id="btn-rol"[^>]*>', html).group(0)
+    rol = re.search(r'<div id="rol-caja"[^>]*>', html).group(0)
     badge = re.search(r'<span id="n-correos"[^>]*>', html).group(0)
     assert " hidden" not in rol and "reserva" in rol
     assert " hidden" not in badge and "sin-n" in badge
