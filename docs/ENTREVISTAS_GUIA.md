@@ -24,7 +24,7 @@
 ## 3. Mensajes de invitación (adaptá el tono)
 
 **WhatsApp / mensaje corto**
-> Hola [Nombre], soy [nombre], participante de un hackatón de ciberseguridad. Estoy investigando cómo las organizaciones pequeñas manejan los correos sospechosos (phishing) para un proyecto. ¿Me regalarías 15 minutos esta semana (miércoles o jueves) para hacerte unas preguntas? No vendo nada, solo quiero aprender de tu experiencia. Mil gracias.
+> Hola [Nombre], soy [tu nombre], participante de un hackatón de ciberseguridad. Estoy investigando cómo las organizaciones pequeñas manejan los correos sospechosos (phishing) para un proyecto. ¿Me regalarías 15 minutos esta semana (miércoles o jueves) para hacerte unas preguntas? No vendo nada, solo quiero aprender de tu experiencia. Mil gracias.
 
 **Correo**
 > Asunto: 15 minutos para una investigación sobre correo y seguridad
