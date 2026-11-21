@@ -31,20 +31,7 @@ const VIEWS = {
 };
 const OLD_HASHES = { correos: "panel", resumen: "panel" }; // enlaces de versiones anteriores
 
-const lastHuman = (a) => {
-  const h = a.actions.filter((x) => REVIEW_OUTCOME[x.type]);
-  return h.length ? h[h.length - 1].type : null;
-};
-// "safe" = correo limpio: riesgo bajo y ninguna señal
-const riskKey = (a) => (a.risk === "low" && !a.signals.length ? "safe" : a.risk);
-const FILTERS = [
-  { key: "all", label: "Todos", cls: "todos", match: () => true },
-  { key: "high", label: "Alta", cls: "alta", match: (a) => a.risk === "high" },
-  { key: "medium", label: "Media", cls: "media", match: (a) => a.risk === "medium" },
-  { key: "low", label: "Baja", cls: "baja", match: (a) => riskKey(a) === "low" },
-  { key: "quarantine", label: "Cuarentena", cls: "cuar", match: (a) => a.status === "quarantined" },
-  { key: "legit", label: "Legítimos", cls: "legit", match: (a) => lastHuman(a) === "mark_legit" },
-];
+// lastHuman, riskKey, finalState y FILTERS viven en estado.js (se carga antes que este archivo).
 
 // --- Estado de la vista (solo del navegador; no son datos de correos) ---
 let allAlerts = [];
@@ -163,7 +150,7 @@ function statusText(alert) {
   if (alert.status === "quarantined") return STATUS_TEXT.quarantined;
   if (alert.reviewed) {
     const human = lastHuman(alert);
-    if (human) return REVIEW_OUTCOME[human];
+    if (human && REVIEW_OUTCOME[human]) return REVIEW_OUTCOME[human];
   }
   return STATUS_TEXT[alert.status];
 }
@@ -1203,9 +1190,9 @@ function renderSummary() {
   const lim = lastAlerts;
   document.getElementById("kpi-total").textContent = String(lim.length);
   document.getElementById("kpi-total-sub").textContent = lastCoverage.length + (lastCoverage.length === 1 ? " buzón" : " buzones");
-  document.getElementById("kpi-alta").textContent = String(lim.filter((a) => a.risk === "high").length);
-  document.getElementById("kpi-media").textContent = String(lim.filter((a) => a.risk === "medium").length);
-  document.getElementById("kpi-baja").textContent = String(lim.filter((a) => riskKey(a) === "low").length);
+  document.getElementById("kpi-alta").textContent = String(lim.filter(FILTERS.find((f) => f.key === "high").match).length);
+  document.getElementById("kpi-media").textContent = String(lim.filter(FILTERS.find((f) => f.key === "medium").match).length);
+  document.getElementById("kpi-baja").textContent = String(lim.filter(FILTERS.find((f) => f.key === "low").match).length);
 }
 
 // --- Invitaciones --------------------------------------------------------------------------

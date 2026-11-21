@@ -558,3 +558,6 @@ body:not([data-vista="panel"]) .detalle { display: none; }
 }
 .b-card .barra-puntaje > span { background: var(--medium); }
 .b-card .barra-puntaje > span.alta { background: var(--high); }
+
+/* Pestaña «Limpios» (correos sin señales): mismo verde que «Legítimos» */
+.filtro.limpio .n { color: var(--safe-text); }
