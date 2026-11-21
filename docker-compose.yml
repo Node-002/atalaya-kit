@@ -1,0 +1,51 @@
+# Kit autoalojado de Atalaya (ver docs/INSTALACION.md y docs/adr/0012-kit-autoalojado.md).
+#
+#   docker compose up -d --build                 -> Atalaya en 127.0.0.1:8000 (evaluacion o con tu propio proxy)
+#   docker compose --profile tls up -d --build   -> ademas Caddy con HTTPS automatico (puertos 80 y 443)
+#
+# Antes de arrancar:  cp .env.kit.example .env.kit  (y completarlo)  +  poner el JSON de Google en
+# ./secrets/google_client.json. Ninguno de los dos archivos va al repositorio (.gitignore).
+# Este archivo NO usa la etapa `demo` ni ATALAYA_MODE=demo: el kit corre siempre en modo gmail.
+
+services:
+  atalaya:
+    build:
+      context: .
+      target: kit
+    image: atalaya-kit:local
+    restart: unless-stopped
+    env_file: .env.kit
+    ports:
+      # Solo en este equipo. Con Caddy no hace falta publicarlo: Caddy lo alcanza por la red interna.
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - atalaya-data:/srv/data
+      # JSON del cliente OAuth de Google, solo lectura. La ruta dentro del contenedor es
+      # GOOGLE_CLIENT_SECRETS_FILE=/run/secrets/google_client.json (ya viene en .env.kit.example).
+      - ./secrets/google_client.json:/run/secrets/google_client.json:ro
+    read_only: true            # el sistema de archivos del contenedor es de solo lectura...
+    tmpfs:
+      - /tmp                   # ...salvo /tmp (memoria) y el volumen de datos
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    profiles: ["tls"]
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - atalaya
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # certificados: no los pierdas o Let's Encrypt limitara los reintentos
+      - caddy-config:/config
+
+volumes:
+  atalaya-data:
+  caddy-data:
+  caddy-config:

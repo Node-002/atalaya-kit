@@ -26,3 +26,6 @@ pitch
 app/tests
 Dockerfile
 .dockerignore
+docker-compose.yml
+Caddyfile
+.env.kit.example
