@@ -202,6 +202,8 @@ def create_app(
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        if base_url.startswith("https"):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         if path.startswith(("/api/", "/auth/")):
             response.headers["Cache-Control"] = "no-store"
         return response
