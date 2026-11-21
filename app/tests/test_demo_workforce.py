@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.providers.demo import demo_workforce
 
 CSRF = {"X-Requested-With": "atalaya"}
 
@@ -20,7 +21,7 @@ def _mailboxes(client):
 
 def test_demo_has_several_simulated_employees(client):
     boxes = _mailboxes(client)
-    assert len(boxes) == 3
+    assert len(boxes) == len(demo_workforce()) >= 12
     assert all(b["status"] == "connected" for b in boxes.values())
     labels = " ".join(boxes)
     assert (
@@ -43,7 +44,8 @@ def test_filter_alerts_by_mailbox(client):
     ana = _mailboxes(client)["Ana Ruiz - Recursos Humanos"]["mailbox_id"]
     alerts = client.get(f"/api/alerts?mailbox_id={ana}").json()
     assert alerts and all(a["mailbox_id"] == ana for a in alerts)
-    assert all(a["risk"] == "low" for a in alerts)
+    # el phishing compartido entre Maria y Carlos no aparece en el buzon de Ana
+    assert all(a["sender_domain"] != "bancogeneral-seguridad.com" for a in alerts)
 
 
 def test_approving_in_one_mailbox_does_not_touch_the_other(client):
@@ -97,9 +99,10 @@ def test_reset_removes_invited_mailboxes_but_keeps_the_team(client):
         .rsplit("/", 1)[-1]
     )
     client.get(f"/auth/demo/connect?invite={token}&consent=1")
-    assert len(_mailboxes(client)) == 4
+    team = len(demo_workforce())
+    assert len(_mailboxes(client)) == team + 1
     assert client.post("/api/demo/reset").status_code == 200
-    assert len(_mailboxes(client)) == 3
+    assert len(_mailboxes(client)) == team
     assert all(
         a["status"] == "pending_approval" or a["priority"] > 0
         for a in client.get("/api/alerts").json()

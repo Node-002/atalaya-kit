@@ -237,7 +237,8 @@ def test_scale_caps_rows_and_stays_fast():
     pdf = report_pdf.build_org_pdf("Org", alerts, audit, campaigns)
     assert time.perf_counter() - start < 10
     text = _flat(pdf)
-    assert f"Se muestran los {report_pdf.MAX_MAILBOXES} buzones" in text
+    # el estado se agrupa por AREA (como mucho 7 filas), no por buzon: 200 buzones no llenan la tabla
+    assert "Estado por área" in text
     assert f"Se muestran las {report_pdf.MAX_DECISIONS} más recientes de 400" in text
     assert len(PdfReader(BytesIO(pdf)).pages) < 60
     assert len(pdf) < 3_000_000
