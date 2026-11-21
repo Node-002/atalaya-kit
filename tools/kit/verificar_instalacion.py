@@ -37,7 +37,7 @@ DEFAULT_HOST_JSON = (
     "secrets/google_client.json"  # donde docker-compose.yml espera el JSON
 )
 CLOCK_URL = "https://www.googleapis.com/"
-SKEW_WARN = 2.0  # segundos
+SKEW_WARN = 3.0  # segundos
 SKEW_FAIL = 30.0
 
 

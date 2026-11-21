@@ -98,3 +98,18 @@ jobs:
           exit-code: "1"
           format: table
           vuln-type: os,library
+
+  kit:
+    name: Kit autoalojado (construir, negarse sin claves, levantar con compose)
+    needs: pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Probar el kit (datos falsos generados aqui; ver .github/scripts/check-kit.sh)
+        run: .github/scripts/check-kit.sh
