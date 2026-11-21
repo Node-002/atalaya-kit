@@ -1,62 +1,84 @@
-# Atalaya — el agente que vigila tu correo
+# Atalaya — el agente que vigila el correo de tu organización
 
-> Equipo: **Sentinel Zero** (un integrante). Nombre anterior del proyecto: HuelaEstafa Guard.
+> Equipo **Sentinel Zero** (una persona) · Dojo AI Hackathon, 20–22 de noviembre de 2026 · Track **Build for Business**
 
-> Dojo AI Hackathon · 20–22 de noviembre de 2026 · Proyecto en solitario
+Atalaya revisa cada correo nuevo de los buzones de una organización pequeña (empresa, colegio, universidad), explica en español **por qué** desconfía de alguno y, **solo con la aprobación de una persona**, lo saca de la bandeja. Nunca borra ni envía correos.
 
 ## El problema
-El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlaces maliciosos, adjuntos
-infectados). Las pymes, colegios y universidades no tienen un equipo de seguridad que revise cada correo,
-y los empleados dudan o hacen clic.
+El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlaces engañosos, suplantación de marcas). Las organizaciones pequeñas no tienen un equipo de seguridad que revise cada mensaje, y las soluciones que existen vienen de grandes proveedores. Las cifras públicas y sus límites están en [docs/EVIDENCIA_PUBLICA.md](docs/EVIDENCIA_PUBLICA.md).
 
-## La solución
-Un sistema web donde un empleado conecta su correo institucional con "Iniciar sesión con Google"
-(sin contraseña) y **da su consentimiento**. A partir de ahí, cada correo nuevo se analiza automáticamente:
+## Qué hace hoy (verificado con pruebas)
+1. **Analiza cada correo nuevo con reglas calculadas por código**, no por IA:
+   - autenticación del remitente (SPF, DKIM y DMARC, leídos de las cabeceras);
+   - dominios parecidos a una marca, letras de otros alfabetos (homógrafos) y errores de escritura de la marca (22 marcas);
+   - remitente que aparenta ser una marca pero escribe desde otro dominio;
+   - «responder a» distinto del remitente, enlaces acortados, lenguaje de urgencia;
+   - instrucciones ocultas dirigidas a una IA (intento de manipulación).
+2. **Explica el resultado en español sencillo.** Un modelo de IA solo redacta la explicación; los hechos los calcula el código. En la demo la explicación es **simulada** y así se indica en pantalla.
+3. **Etiqueta el correo y pide una decisión.** La cuarentena (quitar de la bandeja y poner la etiqueta «Sospechoso») es reversible y siempre requiere aprobación; si la decisión va en contra de Atalaya se exige un motivo escrito.
+4. **Panel para la organización:** resumen por buzón, correos por grupo, historial de decisiones, informe por correo y **campañas** (el mismo ataque llegando a varios buzones se aísla con una sola acción).
+5. **Roles:** administración y **supervisor de solo lectura**.
+6. **Invitaciones:** cada persona conecta su buzón con «Iniciar sesión con Google» y un enlace de un solo uso.
 
-1. **Autenticidad del remitente:** SPF/DKIM/DMARC, dominio parecido a una marca, remitente distinto de la dirección de respuesta.
-2. **Enlaces:** reglas (acortadores, dominios recién creados) + reputación (Safe Browsing).
-3. **Adjuntos:** consulta por hash (VirusTotal); el archivo nunca se sube.
-4. **Explicación en español** con IA, basada en hechos calculados por código.
-5. **Acción:** etiqueta en la bandeja ("Sospechoso") y alerta al responsable de seguridad.
+## Qué NO hace (límites honestos)
+- **No analiza adjuntos** ni consulta reputación de enlaces (Safe Browsing, VirusTotal): no está construido.
+- **No detecta fraudes sin señales técnicas** (por ejemplo, un «jefe» que pide una transferencia sin enlaces).
+- Solo Gmail; **Microsoft 365 no está construido**.
+- La explicación con IA real (Anthropic) está implementada pero **no se ha probado con saldo real**.
+- La medición de detección usa un corpus **sintético** que escribimos nosotros: 21 de 24 intentos detectados y 3 de 24 correos legítimos marcados de más ([docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md)). No es una medición con correos reales.
+- Google solo permite usuarios de prueba (máximo 100) hasta verificar la aplicación.
 
-**Principio central:** el responsable ve alertas, **no el contenido de los correos**.
-
-## Arquitectura
+## Cómo funciona
 ```
-Gmail API ──(polling cada minuto)──> Cola de correos nuevos
-   → Enmascarar datos personales → Analizadores (autenticación, enlaces, adjuntos, reglas)
-   → IA explica (el correo se trata como dato hostil) → Veredicto
-   → Etiqueta en Gmail + alerta en el panel (se guarda solo veredicto, señales y un ID)
+Gmail ──(consulta periódica, solo bandeja de entrada, últimos 7 días)──> correos nuevos
+   → se enmascaran teléfonos, cuentas y cédulas → analizadores (reglas)
+   → explicación (IA o simulada; el correo es dato hostil, la salida se valida) → veredicto
+   → alerta en el panel + etiqueta en Gmail → decisión humana (cuarentena reversible)
+```
+**Privacidad:** no se guardan cuerpos ni adjuntos; solo veredicto, señales, identificador y estado. Los tokens de Google se cifran (Fernet).
+
+## Dos modos
+| Modo | Para qué | Cuentas reales |
+|---|---|---|
+| `demo` (por defecto) | Demostración pública con empleados simulados, sin inicio de sesión y base de datos en memoria | No |
+| `gmail` | Uso real en tu computadora, con inicio de sesión de administración con Google y usuarios de prueba | Sí (solo local) |
+
+**El despliegue público es solo modo demo.** Ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+## Probarlo en tu computadora (modo demo)
+Requisitos: Python 3.12.
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate     Linux/Mac: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --port 8000
+```
+Abre `http://127.0.0.1:8000`. (En Windows, `127.0.0.1` responde más rápido que `localhost`.)
+
+Para el modo `gmail` hacen falta credenciales de Google y claves propias: ver [.env.example](.env.example) y [docs/adr/0003-buzones-invitaciones-y-administracion.md](docs/adr/0003-buzones-invitaciones-y-administracion.md). **Nunca subas el archivo `.env`.**
+
+## Pruebas y comprobaciones de seguridad
+```bash
+pip install -r requirements-dev.txt
+pytest                      # pruebas
+ruff check .                # estilo y errores comunes
+bandit -r app -x app/tests  # análisis estático de seguridad
+pip-audit -r requirements.txt   # vulnerabilidades en dependencias
+gitleaks detect --source .  # secretos en el historial
 ```
 
-## Stack
-- **Backend:** Python + FastAPI
-- **Login/correo:** Google OAuth 2.0 + Gmail API (Microsoft Graph como extra futuro)
-- **Análisis:** reglas propias, `tldextract`, RDAP/whois, Safe Browsing, VirusTotal (hashes)
-- **IA:** Claude API (explicación estructurada)
-- **Frontend:** HTML + JS simple con Tailwind
-- **Datos:** SQLite; tokens cifrados; sin guardar contenido de correos
-- **Deploy:** Render o Railway (HTTPS obligatorio para OAuth)
+## Cómo se usó la programación con IA
+El proyecto se construyó con Claude Code (agente de programación) bajo reglas escritas en [CLAUDE.md](CLAUDE.md): cambios pequeños, pruebas antes de dar algo por terminado, seguridad no negociable y alcance congelado en [docs/MVP_ALCANCE.md](docs/MVP_ALCANCE.md). Cada decisión de arquitectura tiene su ADR en [docs/adr/](docs/adr/). Qué se pidió, qué generó la IA y qué decidió o corrigió la persona está en [docs/USO_DE_IA.md](docs/USO_DE_IA.md).
 
-## Estructura
-```
-Hackaton/
-├── README.md
-├── docs/
-│   ├── IDEAS.md                 ← análisis de ideas y evolución
-│   ├── PLAN.md                  ← plan por días
-│   ├── PITCH.md                 ← guion de la demo
-│   └── ETICA_LEGAL_SEGURIDAD.md ← ética, leyes, riesgos y verificaciones
-├── pitch/archivo/               ← pitch anterior (FacturaCR)
-└── app/                         ← código (por crear)
-```
-
-## Track objetivo
-**Track 02 · AI Operators**: un agente que lleva el proceso de seguridad del correo de principio a fin (detecta, analiza, decide, actúa) con una persona que aprueba lo de alto impacto. Detalles en [docs/REGLAS_Y_TRACKS.md](docs/REGLAS_Y_TRACKS.md).
-
-## Alcance del MVP
-Login con Google → lectura automática de correos nuevos → análisis → etiqueta + panel de alertas.
-Todo lo demás (Microsoft, cuarentena, capturas) son extras.
+## Documentos clave
+| Documento | Contenido |
+|---|---|
+| [docs/PLAN_MAESTRO.md](docs/PLAN_MAESTRO.md) | Plan del hackatón |
+| [docs/MVP_ALCANCE.md](docs/MVP_ALCANCE.md) | Qué entra y qué no |
+| [docs/REVISION_SEGURIDAD.md](docs/REVISION_SEGURIDAD.md) | Revisión de seguridad |
+| [docs/ANALISIS_POR_AREAS.md](docs/ANALISIS_POR_AREAS.md) | Estado del proyecto por áreas, con puntaje |
+| [docs/ETICA_LEGAL_SEGURIDAD.md](docs/ETICA_LEGAL_SEGURIDAD.md) | Ética, leyes y riesgos |
+| [docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md) | Medición de la detección |
 
 ## Aviso
-Herramienta de apoyo, no garantía. Ver [docs/ETICA_LEGAL_SEGURIDAD.md](docs/ETICA_LEGAL_SEGURIDAD.md).
+Atalaya es una herramienta de apoyo, no una garantía de seguridad. La decisión final es siempre de una persona.

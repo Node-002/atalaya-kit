@@ -1,5 +1,7 @@
+# Herramientas de desarrollo y comprobacion (version fija para que todos obtengan lo mismo).
 -r requirements.txt
-pytest
-ruff
-bandit
-pip-audit
+pytest==9.2.0
+pytest-cov==7.1.0
+ruff==0.17.6
+bandit==1.9.4
+pip-audit==2.10.1
