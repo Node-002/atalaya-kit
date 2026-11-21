@@ -1,5 +1,7 @@
 # Despliegue público de Atalaya (solo modo demo)
 
+> Esto es solo para la **demo pública**. Para que una organización instale Atalaya con sus propios correos, ver el **kit autoalojado**: [INSTALACION.md](INSTALACION.md). La imagen tiene tres etapas (`base`, `kit`, `demo`); Render y `docker build .` construyen la **última** (`demo`), que sigue forzando `ATALAYA_MODE=demo`.
+
 El enlace público usa **modo demo**: empleados simulados, sin inicio de sesión, base de
 datos en memoria, sin Google ni cuentas reales. La imagen (`Dockerfile`) fuerza
 `ATALAYA_MODE=demo`; no hace falta —ni conviene— poner ninguna otra variable.
