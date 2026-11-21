@@ -42,6 +42,7 @@ class AdminAuth:
         *,
         password: str | None = None,
         emails: frozenset[str] = frozenset(),
+        supervisors: frozenset[str] = frozenset(),
         domain: str | None = None,
         secure_cookie: bool = False,
         limiter: RateLimiter | None = None,
@@ -57,7 +58,7 @@ class AdminAuth:
             raise RuntimeError(
                 f"ATALAYA_ADMIN_PASSWORD debe tener al menos {MIN_PASSWORD_LENGTH} caracteres."
             )
-        if password is None and not emails:
+        if password is None and not emails and not supervisors:
             raise RuntimeError(
                 "Configura ATALAYA_ADMIN_EMAILS (inicio de sesion con Google) "
                 "y/o ATALAYA_ADMIN_PASSWORD."
@@ -67,6 +68,10 @@ class AdminAuth:
             hashlib.sha256(password.encode()).digest() if password else None
         )
         self._emails = emails
+        # Supervisores: mismo inicio de sesion, pero de solo lectura. Si una cuenta esta en
+        # las dos listas, gana la administracion.
+        self._supervisors = supervisors - emails
+        self._roles: dict[str, str] = {}  # identidad enmascarada -> rol
         self._domain = domain.lower() if domain else None
         self.secure_cookie = secure_cookie
         self.registry = registry
@@ -85,7 +90,7 @@ class AdminAuth:
 
     @property
     def google_enabled(self) -> bool:
-        return bool(self._emails)
+        return bool(self._emails or self._supervisors)
 
     @property
     def domain(self) -> str | None:
@@ -116,11 +121,15 @@ class AdminAuth:
         if not hmac.compare_digest(str(claims.get("nonce", "")), nonce):
             return None
         email = normalize_email(email)
-        if not is_safe_email(email) or email not in self._emails:
+        if not is_safe_email(email) or not (
+            email in self._emails or email in self._supervisors
+        ):
             return None
         if self._domain and str(claims.get("hd", "")).lower() != self._domain:
             return None
-        return self._identity(email)
+        identity = self._identity(email)
+        self._roles[identity] = "admin" if email in self._emails else "supervisor"
+        return identity
 
     def masked_account(self, claims: dict) -> str:
         email = claims.get("email")
@@ -150,6 +159,11 @@ class AdminAuth:
     def identity(self, request: Request) -> str | None:
         session = self._session(request)
         return session[1] if session else None
+
+    def role(self, request: Request) -> str | None:
+        """'admin', 'supervisor' (solo lectura) o None si no hay sesion."""
+        identity = self.identity(request)
+        return None if identity is None else self._roles.get(identity, "admin")
 
     def end_session(self, request: Request) -> None:
         session = self._session(request)
@@ -251,7 +265,7 @@ def build_admin_router(admin: AdminAuth, registry: Registry) -> APIRouter:
         identity = admin.identity(request)
         if identity is None:
             raise HTTPException(status_code=401, detail="Inicia sesion.")
-        return {"role": "admin", "id": identity}
+        return {"role": admin.role(request) or "admin", "id": identity}
 
     @router.get("/api/security/events")
     def security_events() -> list[dict]:
