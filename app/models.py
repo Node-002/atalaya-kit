@@ -43,12 +43,37 @@ class Message(BaseModel):
     body: str
     headers: dict[str, str] = Field(default_factory=dict)
     links: list[str] = Field(default_factory=list)
+    # Cabeceras tecnicas (nombre, valor) en memoria; solo una lista blanca llega a la Ficha.
+    header_lines: list[tuple[str, str]] = Field(default_factory=list)
 
 
 class Signal(BaseModel):
     code: str
     description: str
     weight: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def vector(self) -> str:
+        """Tipo de ataque al que apunta esta senal (para agrupar en la analitica)."""
+        from app.ficha import vector_of_code
+
+        return vector_of_code(self.code)
+
+
+class Ficha(BaseModel):
+    """Metadatos tecnicos de cabeceras (lista blanca). Ver app/ficha.py: nunca asunto, cuerpo,
+    adjuntos ni direcciones completas."""
+
+    spf: str | None = None
+    dkim: str | None = None
+    dmarc: str | None = None
+    source_ip: str | None = None
+    return_path: str | None = None  # ab***@dominio
+    reply_to_domain: str | None = None
+    link_hosts: list[str] = Field(default_factory=list)  # hxxps://host[.]tld
+    vector: str | None = None
+    smtp: list[str] = Field(default_factory=list)  # cabeceras saneadas
 
 
 HUMAN_ACTIONS = (
@@ -81,6 +106,7 @@ class Alert(BaseModel):
     # Huellas (hash) para agrupar campanas entre buzones; nunca el remitente ni el asunto.
     sender_key: str = ""
     topic_key: str = ""
+    ficha: Ficha | None = None  # alertas viejas: None ("Sin datos tecnicos guardados")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -100,6 +126,13 @@ class Alert(BaseModel):
         if self.reviewed:
             return 3
         return 4
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def vector(self) -> str:
+        from app.ficha import vector_of
+
+        return vector_of(self.signals)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

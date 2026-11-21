@@ -69,6 +69,20 @@ def build_report(alert: Alert) -> str:
     lines += [f"  - {s.description} ({s.weight} puntos)" for s in alert.signals] or [
         "  - Ninguna"
     ]
+    lines += ["", "## Datos tecnicos del mensaje (solo cabeceras)", ""]
+    f = alert.ficha
+    if f is None:
+        lines.append("Sin datos tecnicos guardados para este correo.")
+    else:
+        lines += [
+            f"- Autenticacion: SPF {f.spf or 'sin dato'}, DKIM {f.dkim or 'sin dato'}, DMARC {f.dmarc or 'sin dato'}",
+            f"- IP de origen: {f.source_ip or 'no encontrada'} (el pais no se consulta)",
+            f"- Vector de ataque: {f.vector or '-'}",
+            f"- Return-Path: {f.return_path or '-'}",
+            f"- Dominio de Reply-To: {f.reply_to_domain or '-'}",
+            f"- Enlaces (host neutralizado): {', '.join(f.link_hosts) or '-'}",
+        ]
+        lines += [f"  - {_one_line(h)}" for h in f.smtp]
     lines += ["", "## 2. Decisiones de las personas", ""]
     if not human:
         lines.append("Todavia no hay decisiones humanas sobre este correo.")

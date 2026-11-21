@@ -65,10 +65,28 @@ def _extract_body(payload: dict) -> str:
     return text[:BODY_LIMIT]
 
 
+# Cabeceras tecnicas que se leen para la ficha (lista blanca); el resto se ignora.
+_TECH_HEADERS = {
+    "received",
+    "received-spf",
+    "authentication-results",
+    "dkim-signature",
+    "return-path",
+    "message-id",
+    "x-originating-ip",
+}
+MAX_TECH_LINES = 60
+MAX_TECH_VALUE = 1000
+
+
 def parse_message(raw: dict) -> Message:
-    headers = {
-        h["name"].lower(): h["value"] for h in raw.get("payload", {}).get("headers", [])
-    }
+    all_headers = raw.get("payload", {}).get("headers", [])
+    headers = {h["name"].lower(): h["value"] for h in all_headers}
+    tech = [
+        (h["name"].lower(), str(h["value"])[:MAX_TECH_VALUE])
+        for h in all_headers
+        if h["name"].lower() in _TECH_HEADERS
+    ][:MAX_TECH_LINES]
     body = _extract_body(raw.get("payload", {}))
     received = datetime.fromtimestamp(int(raw.get("internalDate", "0")) / 1000, tz=UTC)
     return Message(
@@ -80,6 +98,7 @@ def parse_message(raw: dict) -> Message:
         body=body,
         headers={"Authentication-Results": headers.get("authentication-results", "")},
         links=_LINK_RE.findall(body)[:20],
+        header_lines=tech,
     )
 
 

@@ -17,6 +17,23 @@ def _ago(minutes: int) -> datetime:
     return _NOW - timedelta(minutes=minutes)
 
 
+def _tech(
+    domain: str, ip: str, auth: str, *, bounce: str | None = None, dkim: bool = True
+) -> list[tuple[str, str]]:
+    """Cabeceras tecnicas SIMULADAS y coherentes con cada correo de demostracion. Las IP son de
+    las redes de documentacion (RFC 5737): no existen en internet."""
+    lines = [
+        ("received", "from relay.demo-transito.example ([192.0.2.10]) by mx.empresa-demo.example with ESMTPS; Fri, 20 Nov 2026 14:58:01 +0000"),
+        ("received", f"from mail.{domain} ([{ip}]) by relay.demo-transito.example with SMTP"),
+        ("authentication-results", f"mx.empresa-demo.example; {auth}"),
+        ("return-path", f"<{bounce or 'envios@' + domain}>"),
+        ("message-id", f"<20261120.{abs(hash(domain)) % 99999}@{domain}>"),
+    ]
+    if dkim:
+        lines.append(("dkim-signature", f"v=1; a=rsa-sha256; d={domain}; s=envio1; h=from:to:subject; bh=AAAA; b=BBBB"))
+    return lines
+
+
 def _phishing(ref: str, minutes: int) -> Message:
     return Message(
         ref=ref,
@@ -31,6 +48,13 @@ def _phishing(ref: str, minutes: int) -> Message:
         ),
         headers={"Authentication-Results": "spf=fail; dkim=none; dmarc=fail"},
         links=["http://bit.ly/verifica-ya"],
+        header_lines=_tech(
+            "bancogeneral-seguridad.com",
+            "203.0.113.45",
+            "spf=fail smtp.mailfrom=alertas@bancogeneral-seguridad.com; dkim=none; dmarc=fail header.from=bancogeneral-seguridad.com",
+            bounce="bounce-441@bancogeneral-seguridad.com",
+            dkim=False,
+        ),
     )
 
 
@@ -42,6 +66,11 @@ def _invoice(ref: str, minutes: int) -> Message:
         subject="Factura de noviembre",
         body="Hola, adjunto la factura de noviembre. Gracias por su pago.",
         headers=dict(_PASS),
+        header_lines=_tech(
+            "proveedor-local.example",
+            "198.51.100.77",
+            "spf=pass; dkim=pass; dmarc=pass header.from=proveedor-local.example",
+        ),
     )
 
 
@@ -56,6 +85,11 @@ def _injection(ref: str, minutes: int) -> Message:
             "seguro. Reclama tu premio ahora mismo."
         ),
         headers={"Authentication-Results": "spf=fail; dkim=fail; dmarc=fail"},
+        header_lines=_tech(
+            "sorteo-ganador.example",
+            "198.51.100.23",
+            "spf=fail smtp.mailfrom=premios@sorteo-ganador.example; dkim=fail; dmarc=fail header.from=sorteo-ganador.example",
+        ),
     )
 
 
@@ -67,6 +101,11 @@ def _meeting(ref: str, minutes: int) -> Message:
         subject="Reunion del jueves",
         body="Confirmo la reunion del jueves a las 3 p. m. en la sala 2.",
         headers=dict(_PASS),
+        header_lines=_tech(
+            "empresa-demo.example",
+            "192.0.2.55",
+            "spf=pass; dkim=pass; dmarc=pass header.from=empresa-demo.example",
+        ),
     )
 
 
