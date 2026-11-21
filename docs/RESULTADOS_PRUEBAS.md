@@ -103,3 +103,18 @@ Se probaron a mano ~35 casos adversos (subdominios engañosos, arrobas en enlace
 - **Nombre visible** con la marca como palabra normal («Apple Pie Bakery», «Amazon Tours») se marca (`display_name_brand`, 30 pts = medio). Es el costo de buscar el nombre de marca como palabra completa.
 - **Dominios legítimos de una marca que no estén en la lista** (p. ej. `googleusercontent.com`, `googleapis.com` usados en enlaces) se marcarían como falsos. Lista de oficiales pendiente de verificar.
 - `rnicrosoft` (`rn` por `m`) y otros confundibles visuales no se cubren.
+
+## Verificación de dominios oficiales de marcas (21 nov 2026)
+Corpus ampliado de **48 a 62 correos** (8 legítimos y 6 de phishing nuevos, `L25`–`L32` y `P25`–`P30`; los falsos usan dominios `.example`). Fuentes y lista completa: `docs/VERIFICACION_MARCAS.md`. No se tocaron pesos ni umbrales.
+
+| Medida | Antes, 48 correos (lista de memoria) | Después, mismos 48 | Lista anterior sobre los 62 | Lista verificada sobre los 62 |
+|---|---|---|---|---|
+| Phishing detectado | 21/24 (88 %) | 21/24 (88 %) | 25/30 (83 %) | 27/30 (90 %) |
+| Falsos positivos | 3/24 (12 %) | 3/24 (12 %) | 7/32 (22 %) | 3/32 (9 %) |
+| Precisión de «riesgo alto» | 93 % (14 marcados) | 93 % (14 marcados) | 84 % (19 marcados) | 95 % (19 marcados) |
+
+**Nada empeoró** y los 48 originales no cambian: ninguno usaba dominios que faltaran en la lista. La mejora está en los 14 casos nuevos, que escribí yo mismo para esto: es una prueba de regresión de la lista, **no una medición independiente**.
+- **Falsos positivos que desaparecen (L25, L27, L28, L29):** correo legítimo desde `bgeneral.com` (el dominio principal de Banco General, que faltaba), `amazon.com.br`, `paypal-communications.com` y un enlace a `microsoft365.com`. Con la lista de memoria salían como riesgo medio o alto.
+- **Detecciones nuevas (P28, P30):** LinkedIn con typo (`linkedln`) y Scotiabank, que antes no estaban. WhatsApp, DocuSign y Bancolombia (P25–P27) ya salían altos por la autenticación fallida y la urgencia; los casos prueban además que ahora se reconoce el parecido con la marca.
+- **P29** (enlace `bgeneral-clientes.example` en un correo desde el dominio oficial) solo se detecta por la palabra de marca nueva `bgeneral`; con la lista anterior el correo salía por una razón equivocada (marcaba el remitente legítimo).
+- **Límite:** los falsos positivos que quedan (L03, L08, L14) no tienen que ver con marcas. Zoom y Adobe no se añadieron (palabras comunes). Pruebas unitarias nuevas: `app/tests/test_brand_domains.py` (59 casos: oficiales sin marcar, imitaciones, homógrafos y dominios de alojamiento de terceros que no deben ser oficiales).
