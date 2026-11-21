@@ -16,7 +16,7 @@ El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlac
    - instrucciones ocultas dirigidas a una IA (intento de manipulación).
 2. **Explica el resultado en español sencillo.** Un modelo de IA solo redacta la explicación; los hechos los calcula el código. En la demo la explicación es **simulada** y así se indica en pantalla.
 3. **Etiqueta el correo y pide una decisión.** La cuarentena (quitar de la bandeja y poner la etiqueta «Sospechoso») es reversible y siempre requiere aprobación; si la decisión va en contra de Atalaya se exige un motivo escrito.
-4. **Panel para la organización:** resumen por buzón, correos por grupo, historial de decisiones, informe por correo y **campañas** (el mismo ataque llegando a varios buzones se aísla con una sola acción).
+4. **Panel para la organización:** resumen por buzón, correos por grupo, historial de decisiones, informe por correo y de la organización (también en **PDF** con plantilla, para leerlo y archivarlo) y **campañas** (el mismo ataque llegando a varios buzones se aísla con una sola acción).
 5. **Roles:** administración y **supervisor de solo lectura**.
 6. **Invitaciones:** cada persona conecta su buzón con «Iniciar sesión con Google» y un enlace de un solo uso.
 
