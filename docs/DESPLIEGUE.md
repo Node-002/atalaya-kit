@@ -36,6 +36,14 @@ contraseñas: la demo usa un resumen simulado y no gasta saldo.
 - En el plan gratuito el servicio se duerme: la primera carga puede tardar ~1 minuto.
   Ábrelo unos minutos antes de presentar.
 
+## Ver el resultado de la imagen en el CI
+Cada subida corre el trabajo **`imagen`** (después de `pruebas`). En GitHub: pestaña **Actions** → la ejecución más reciente → trabajo «Imagen Docker (construir, probar y escanear)».
+1. «Construir la imagen» en verde = el `Dockerfile` compila.
+2. «Tamano y capas…»: abre el **Summary** de la ejecución para ver el tamaño y `docker history`.
+3. «Probar el contenedor»: cada línea `OK` / `FALLA` es una comprobación (modo demo, 404 en `/docs` y login de Google, sin cabecera `Server`, cookie `HttpOnly; SameSite=Lax`, usuario no root, `HEALTHCHECK` sano, y que `ATALAYA_MODE=gmail` sigue dando demo).
+4. «Escaneo de vulnerabilidades (Trivy)»: tabla con hallazgos HIGH/CRITICAL que tengan corrección; si hay alguno, el trabajo falla. Se resuelve subiendo la imagen base o la dependencia.
+Si falla, **no despliegues** esa rama en Render hasta entender el motivo. Detalle en `docs/adr/0010-ci-prueba-y-escanea-la-imagen-docker.md`.
+
 ## Probar en ventana privada
 Abre una ventana privada/incógnito (Ctrl+Shift+N en Chrome/Edge) y pega la URL. Así
 compruebas que funciona sin tus sesiones ni cookies, como lo verá el jurado. Prueba también
