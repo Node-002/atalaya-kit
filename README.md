@@ -63,7 +63,7 @@ pip install -r requirements-dev.txt
 pytest                      # pruebas
 ruff check .                # estilo y errores comunes
 bandit -r app -x app/tests  # análisis estático de seguridad
-pip-audit -r requirements.txt   # vulnerabilidades en dependencias
+pip-audit -r requirements.txt && pip-audit -r requirements-dev.txt   # vulnerabilidades en dependencias
 gitleaks detect --source .  # secretos en el historial
 ```
 
