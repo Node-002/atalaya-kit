@@ -1,4 +1,4 @@
-# ADR 0010 — El CI construye, prueba y escanea la imagen Docker
+# ADR 0013 — El CI construye, prueba y escanea la imagen Docker
 
 - **Fecha:** 2026-11-21
 - **Estado:** aceptada.
