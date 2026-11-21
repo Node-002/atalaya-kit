@@ -101,8 +101,8 @@ Decidido por la persona autora. En una empresa, quien usa Atalaya (administraci�
 - **En el pitch:** mostrar la arquitectura con ambos proveedores y el estado real de cada uno, sin presentar como terminado lo que no lo está.
 - **Preparación permitida antes del 20** (registrar en `ESTADO_INICIAL.md`): crear el proyecto de Google Cloud en modo de pruebas y el registro de aplicación en Microsoft Entra, con cuentas de prueba propias de cada proveedor.
 
-### Dato nuevo (18 nov): la una universidad pública usa Microsoft 365
-Una guía oficial de el área de TI explica cómo activar la autenticación multifactor en las cuentas de **Microsoft 365** de la una universidad pública. Es un indicio fuerte de que al menos una universidad grande de Panamá usa Microsoft. Es **un solo dato**: lo deciden las entrevistas (una consultora de TI y una universidad privada). Si la mayoría confirma Microsoft 365, el conector prioritario pasa a ser Microsoft, y el viernes por la mañana hay que preparar el registro de la aplicación en Entra, no solo Google Cloud.
+### Dato nuevo (18 nov): una universidad pública usa Microsoft 365
+Una guía oficial de soporte explica cómo activar la autenticación multifactor en las cuentas de **Microsoft 365** de una universidad pública de Panamá. Es un indicio de que al menos una universidad grande de Panamá usa Microsoft. Es **un solo dato**: lo deciden las entrevistas (hoy hay 0 realizadas). Si la mayoría confirma Microsoft 365, el conector prioritario pasa a ser Microsoft, y el viernes por la mañana hay que preparar el registro de la aplicación en Entra, no solo Google Cloud.
 
 ## Ampliaciones autorizadas (20 nov 2026)
 Con **permiso explícito de la persona dueña del proyecto** el 20 nov 2026 entraron dos piezas que no estaban en "Entra": **campañas** (agrupar el mismo ataque en varios buzones y aislarlo con una sola acción reversible) y un **rol de supervisor de solo lectura** con reporte de la organización. Ver `docs/adr/0005-panel-de-organizacion-campanas-y-supervisor.md`.

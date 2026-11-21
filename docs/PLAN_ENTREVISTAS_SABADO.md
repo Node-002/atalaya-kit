@@ -1,5 +1,7 @@
 # Plan de entrevistas — sábado 21 y domingo 22 (cuando nadie respondió)
 
+> **Estado real: 0 entrevistas realizadas.** Los intentos por correo, WhatsApp y redes sociales (Instagram) a una consultora de TI y a universidades no tuvieron respuesta. Este plan es la alternativa; no se inventó ninguna entrevista.
+
 > Meta realista: **3 conversaciones de 10 minutos** antes del domingo a mediodía. Con 3 ya tenés evidencia propia para el criterio de mayor peso (claridad del problema, 30 %). Más es mejor, pero 3 reales valen más que 10 inventadas.
 
 ## Por qué no respondieron (y qué cambia)
@@ -7,8 +9,8 @@ Los correos fríos a instituciones, un viernes por la tarde, casi nunca se respo
 
 ## A quién escribir (en este orden)
 1. **Quien maneje el correo de un negocio u organización pequeña y ya te conozca:** familiares con negocio (tienda, clínica, consultorio, contabilidad, taller), vecinos, padres de amistades, la persona "que sabe de computadoras" en un negocio familiar.
-2. **Gente de tu universidad:** compañeros cuyos familiares administren un negocio, o que trabajen en una pyme.
-3. **Instituciones, por WhatsApp o llamada** (no más correos): una consultora de TI y una universidad privada ya tienen WhatsApp en `docs/ENTREVISTAS_OBJETIVOS.md`. Escribí el sábado por la mañana; la una universidad pública, por teléfono en horario de oficina (si no hay minutos, WhatsApp primero).
+2. **Gente de tu entorno de estudio o trabajo:** compañeros cuyos familiares administren un negocio, o que trabajen en una pyme.
+3. **Instituciones, por WhatsApp o llamada** (no más correos): la consultora de TI y la universidad privada ya tienen un WhatsApp publicado (guardá esos datos fuera del repositorio). Escribí el sábado por la mañana; a la universidad pública, por teléfono en horario de oficina (si no hay minutos, WhatsApp primero).
 4. **Comunidad del hackathon** (Discussions de Dojo): alguien puede conocer a un dueño de negocio dispuesto a hablar 10 minutos.
 
 ## Mensajes listos (WhatsApp)
