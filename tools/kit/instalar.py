@@ -1256,10 +1256,13 @@ def summary(
         n = 3
     else:
         n = 1
+    local = cfg["mode"] == "local"
+    hint_es = " (escribe localhost, no 127.0.0.1)" if local else ""
+    hint_en = " (type localhost, not 127.0.0.1)" if local else ""
     info(
         t(
-            f"  {n}. Abre {cfg['base_url']} e inicia sesion con Google con una cuenta de administracion.",
-            f"  {n}. Open {cfg['base_url']} and sign in with Google using an admin account.",
+            f"  {n}. Abre {cfg['base_url']}{hint_es} e inicia sesion con Google con una cuenta de administracion.",
+            f"  {n}. Open {cfg['base_url']}{hint_en} and sign in with Google using an admin account.",
         )
     )
     info(
@@ -1268,13 +1271,6 @@ def summary(
             f"  {n + 1}. In the panel create an invitation and send the one-time link to the owner of the first mailbox.",
         )
     )
-    if cfg["mode"] == "local":
-        info(
-            t(
-                "  Abre http://localhost:8000 (escribe localhost, no 127.0.0.1).",
-                "  Open http://localhost:8000 (type localhost, not 127.0.0.1).",
-            )
-        )
 
 
 # ----------------------------------------------------------------------------------------------
@@ -1479,6 +1475,7 @@ def run(args) -> int:
         started = True
         step(5, total, t("Verificacion de la instalacion", "Installation verification"))
         code = run_verifier(kit_dir, app_port, args.verificador_sin_red)
+    step(total, total, t("Resumen", "Summary"))
     summary(cfg, kit_dir, files, key_copy, started)
     if code != 0:
         raise InstallError(
