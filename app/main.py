@@ -15,7 +15,12 @@ from pathlib import Path
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -30,7 +35,8 @@ from app.models import Alert, Coverage
 from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider, demo_workforce
 from app.registry import Registry
-from app.store import AlertStore
+from app.report import build_report
+from app.store import AlertStore, ReasonRequired
 
 load_dotenv()
 log = logging.getLogger("atalaya")
@@ -38,6 +44,10 @@ POLL_SECONDS = int(os.environ.get("ATALAYA_POLL_SECONDS", "60"))
 
 STATIC_DIR = Path(__file__).parent / "static"
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+class DecisionIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
 
 
 class InviteIn(BaseModel):
@@ -240,16 +250,20 @@ def create_app(
     def get_alert(alert_id: str) -> Alert:
         return _alert_or_404(alert_id)
 
-    def _act(fn, alert_id: str, request: Request, audit_action: str) -> Alert:
+    def _act(
+        fn, alert_id: str, request: Request, audit_action: str, body: DecisionIn | None
+    ) -> Alert:
         _alert_or_404(alert_id)
         try:
-            alert = fn(alert_id, actor_of(request))
+            alert = fn(alert_id, actor_of(request), body.reason if body else None)
             registry.audit(
                 actor_of(request),
                 audit_action,
                 f"{alert.sender_domain} - {alert.mailbox_label or 'buzon'}",
             )
             return alert
+        except ReasonRequired as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:  # fallo del proveedor (token revocado, red, API)
@@ -259,16 +273,31 @@ def create_app(
             ) from exc
 
     @app.post("/api/alerts/{alert_id}/approve", response_model=Alert)
-    def approve(alert_id: str, request: Request) -> Alert:
-        return _act(store.approve, alert_id, request, "alert_quarantine")
+    def approve(
+        alert_id: str, request: Request, body: DecisionIn | None = None
+    ) -> Alert:
+        return _act(store.approve, alert_id, request, "alert_quarantine", body)
 
     @app.post("/api/alerts/{alert_id}/reject", response_model=Alert)
-    def reject(alert_id: str, request: Request) -> Alert:
-        return _act(store.reject, alert_id, request, "alert_kept")
+    def reject(
+        alert_id: str, request: Request, body: DecisionIn | None = None
+    ) -> Alert:
+        return _act(store.reject, alert_id, request, "alert_kept", body)
 
     @app.post("/api/alerts/{alert_id}/legit", response_model=Alert)
-    def legit(alert_id: str, request: Request) -> Alert:
-        return _act(store.mark_legit, alert_id, request, "alert_legit")
+    def legit(alert_id: str, request: Request, body: DecisionIn | None = None) -> Alert:
+        return _act(store.mark_legit, alert_id, request, "alert_legit", body)
+
+    @app.get("/api/alerts/{alert_id}/report")
+    def alert_report(alert_id: str, download: bool = False) -> PlainTextResponse:
+        alert = _alert_or_404(alert_id)
+        disposition = "attachment" if download else "inline"
+        return PlainTextResponse(
+            build_report(alert),
+            headers={
+                "Content-Disposition": f'{disposition}; filename="informe-{alert.id}.md"'
+            },
+        )
 
     @app.post("/api/poll")
     def poll() -> dict[str, int]:

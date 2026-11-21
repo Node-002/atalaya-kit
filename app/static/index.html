@@ -57,6 +57,20 @@
     </section>
   </main>
 
+  <dialog id="dlg-motivo" aria-labelledby="motivo-titulo">
+    <form method="dialog" id="form-motivo" class="dlg">
+      <h2 id="motivo-titulo">Motivo de tu decisión</h2>
+      <p id="motivo-ayuda"></p>
+      <label for="motivo-texto">Motivo (mínimo 10 caracteres)</label>
+      <textarea id="motivo-texto" rows="4" maxlength="500" required></textarea>
+      <p id="motivo-msg" class="mensaje" role="alert"></p>
+      <div class="fila fin">
+        <button id="motivo-ok" type="submit" class="btn btn-primary">Confirmar</button>
+        <button id="motivo-cancelar" type="button" class="btn btn-ghost">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="dlg-invitar" aria-labelledby="dlg-titulo">
     <form method="dialog" id="form-invitar" class="dlg">
       <h2 id="dlg-titulo">Invitar un buzón</h2>

@@ -51,10 +51,18 @@ class Signal(BaseModel):
     weight: int
 
 
+HUMAN_ACTIONS = (
+    "quarantine",
+    "reject_quarantine",
+    "mark_legit",
+)  # decisiones de una persona
+
+
 class ActionRecord(BaseModel):
     type: str
     at: datetime
     by: str
+    reason: str | None = None  # motivo escrito por la persona
 
 
 class Alert(BaseModel):
@@ -74,16 +82,33 @@ class Alert(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def priority(self) -> int:
-        """0 = decidir ya, 1 = revisar, 2 = atendido con riesgo, 3 = sin accion pendiente."""
+        """0 = decidir ya, 1 = revisar, 2 = en cuarentena, 3 = ya revisado por una persona,
+        4 = nunca fue sospechoso."""
         if self.status is Status.pending_approval:
             return 0
-        if self.risk is Risk.medium and self.status is Status.labeled:
-            return 1
-        if self.status is Status.quarantined or (
-            self.risk is Risk.high and self.status is Status.labeled
+        if (
+            self.risk is Risk.medium
+            and self.status is Status.labeled
+            and not self.reviewed
         ):
+            return 1
+        if self.status is Status.quarantined:
             return 2
-        return 3
+        if self.reviewed:
+            return 3
+        return 4
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def reviewed(self) -> bool:
+        """Una persona ya tomo una decision sobre este correo."""
+        return any(a.type in HUMAN_ACTIONS for a in self.actions)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def quarantine_needs_reason(self) -> bool:
+        """Aislar lo que Atalaya YA marco como alto es un clic; lo demas exige motivo."""
+        return self.status is not Status.pending_approval
 
 
 class Coverage(BaseModel):
