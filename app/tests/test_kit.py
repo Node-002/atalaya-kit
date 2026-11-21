@@ -362,3 +362,94 @@ def test_kit_example_env_has_placeholders_and_no_real_values():
     assert (ROOT / "Caddyfile").read_text(encoding="utf-8").count(
         "reverse_proxy atalaya:8000"
     ) == 1
+
+
+# --- Ingles opcional (ATALAYA_LANG=en); espanol por defecto ----------------------------------------
+@pytest.fixture()
+def spanish_after():
+    yield
+    verificar.set_lang("es")
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "ATALAYA_BASE_URL",
+        "GOOGLE_CLIENT_SECRETS_FILE",
+        "ATALAYA_FERNET_KEY",
+        "ATALAYA_SESSION_SECRET",
+        "ATALAYA_ADMIN_EMAILS",
+    ],
+)
+def test_preflight_messages_in_english_and_spanish(good_env, missing):
+    del good_env[missing]
+    spanish = " ".join(kit_preflight.check(good_env))
+    english = " ".join(kit_preflight.check({**good_env, "ATALAYA_LANG": "en"}))
+    assert missing in spanish and missing in english
+    assert ("is missing" in english) or ("Set ATALAYA_ADMIN_EMAILS" in english)
+    assert "Falta" in spanish or "Define" in spanish
+    assert "Falta" not in english and "Define" not in english
+
+
+def test_preflight_cli_prints_english_when_asked(good_env, capsys, monkeypatch):
+    del good_env["ATALAYA_FERNET_KEY"]
+    for key, value in good_env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("ATALAYA_LANG", "en")
+    assert kit_preflight.main() == 1
+    err = capsys.readouterr().err
+    assert (
+        "will NOT start" in err
+        and "INSTALLATION.en.md" in err
+        and "NO arranca" not in err
+    )
+    monkeypatch.delenv("ATALAYA_LANG")
+    assert kit_preflight.main() == 1
+    assert "NO arranca" in capsys.readouterr().err
+
+
+def test_verifier_output_in_english(server, good_env, capsys, spanish_after):
+    _handler, url = server
+    verificar.set_lang("en")
+    env = {**good_env, "ATALAYA_FERNET_KEY": "CAMBIAR_CLAVE_FERNET"}
+    assert verificar.run(env, client_json=None, health_url=url, clock_url=url) == 1
+    out = capsys.readouterr().out
+    assert (
+        "FAIL" in out
+        and "still has the example value" in out
+        and "Result: 1 failure(s)" in out
+    )
+    assert "FALLA" not in out and "Resultado" not in out
+
+
+def test_verifier_cli_lang_flag_and_env(tmp_path, capsys, monkeypatch, spanish_after):
+    envfile = tmp_path / ".env.kit"
+    envfile.write_text("ATALAYA_BASE_URL=http://a.example.org\n", encoding="utf-8")
+    assert (
+        verificar.main(["--env-file", str(envfile), "--offline", "--lang", "en"]) == 1
+    )
+    assert "must start with https://" in capsys.readouterr().out
+    monkeypatch.setenv("ATALAYA_LANG", "en")
+    assert verificar.main(["--env-file", str(envfile), "--sin-red"]) == 1
+    assert "is missing" in capsys.readouterr().out
+    monkeypatch.delenv("ATALAYA_LANG")
+    assert verificar.main(["--env-file", str(envfile), "--sin-red"]) == 1
+    assert "Falta" in capsys.readouterr().out
+
+
+def test_english_documents_exist_and_keep_the_honest_warnings():
+    docs = ROOT / "docs"
+    guide_es = (docs / "INSTALACION.md").read_text(encoding="utf-8")
+    guide_en = (docs / "INSTALLATION.en.md").read_text(encoding="utf-8")
+    listing = (docs / "MARKETPLACE_LISTING.en.md").read_text(encoding="utf-8")
+    readme_en = (ROOT / "README.en.md").read_text(encoding="utf-8")
+    # misma estructura: mismo numero de secciones
+    sep = chr(10) + "## "
+    assert guide_en.count(sep) == guide_es.count(sep)
+    for text in (guide_en, listing, readme_en):
+        assert (
+            "not verified with a real" in text.lower()
+            or "not been verified with a real" in text.lower()
+        )
+    assert "to be defined" in listing and "HYPOTHESIS" in listing
+    assert "AGPL-3.0" in listing and "Microsoft 365" in listing
