@@ -1,0 +1,10 @@
+# Configuracion de herramientas. No es un paquete instalable.
+
+[tool.pytest.ini_options]
+testpaths = ["app/tests"]
+# Corta cualquier prueba que se cuelgue (cuelgue intermitente de TestClient en Windows) y
+# muestra cual fue, en vez de esperar para siempre.
+timeout = 120
+
+# Ruff: se usan las reglas por defecto (no habia ruff.toml antes de este archivo).
+[tool.ruff]
