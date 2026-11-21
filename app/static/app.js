@@ -126,8 +126,8 @@ async function busy(btn, work) {
 }
 
 // Estado vacio o de error: explica que pasa y, si se puede, ofrece una salida
-function emptyState(glyph, title, text, action) {
-  const box = el("div", "vacio");
+function emptyState(glyph, title, text, action, asItem) {
+  const box = el(asItem ? "li" : "div", "vacio");
   box.appendChild(el("div", "icono", glyph));
   box.appendChild(el("strong", "", title));
   if (text) box.appendChild(el("p", "", text));
@@ -298,10 +298,10 @@ function renderList() {
   if (!lastAlerts.length) {
     listaEl.appendChild(emptyState("✓", "Bandeja tranquila", filtroEl.value
       ? "Este buzón no tiene correos por revisar."
-      : "Atalaya aún no ha marcado ningún correo. Cuando llegue uno sospechoso, aparecerá aquí con su explicación."));
+      : "Atalaya aún no ha marcado ningún correo. Cuando llegue uno sospechoso, aparecerá aquí con su explicación.", null, true));
   } else if (!items.length) {
     listaEl.appendChild(emptyState("⌕", "Ningún correo coincide", "Cambia el filtro o la búsqueda.",
-      button("Quitar filtros", "btn", () => { ui.filter = "all"; ui.query = ""; document.getElementById("buscar-correos").value = ""; renderFilters(); renderList(); })));
+      button("Quitar filtros", "btn", () => { ui.filter = "all"; ui.query = ""; document.getElementById("buscar-correos").value = ""; renderFilters(); renderList(); }), true));
   }
 }
 document.getElementById("buscar-correos").addEventListener("input", (e) => { ui.query = e.target.value; ui.limit = 40; renderList(); });
@@ -614,8 +614,8 @@ function renderMailboxes() {
     li.appendChild(acc);
     list.appendChild(li);
   });
-  if (!lastCoverage.length) list.appendChild(emptyState("✉", "Todavía no hay buzones", "Cada persona conecta su correo con un enlace tuyo. Pulsa «Invitar buzón» para crear el primero."));
-  else if (!page.length) list.appendChild(emptyState("⌕", "Ningún buzón coincide", "Cambia la búsqueda o quita el filtro «solo los que necesitan atención»."));
+  if (!lastCoverage.length) list.appendChild(emptyState("✉", "Todavía no hay buzones", "Cada persona conecta su correo con un enlace tuyo. Pulsa «Invitar buzón» para crear el primero.", null, true));
+  else if (!page.length) list.appendChild(emptyState("⌕", "Ningún buzón coincide", "Cambia la búsqueda o quita el filtro «solo los que necesitan atención».", null, true));
 }
 
 function focusMailbox(id) {
@@ -685,7 +685,7 @@ function renderHistory() {
   const more = document.getElementById("historial-mas");
   more.hidden = events.length <= ui.historyLimit;
   more.textContent = "Mostrar más (" + (events.length - ui.historyLimit) + " restantes)";
-  if (!events.length) list.appendChild(emptyState("☰", "Todavía no hay actividad", "Aquí verás qué se hizo, quién y cuándo en cuanto alguien entre, invite o decida sobre un correo."));
+  if (!events.length) list.appendChild(emptyState("☰", "Todavía no hay actividad", "Aquí verás qué se hizo, quién y cuándo en cuanto alguien entre, invite o decida sobre un correo.", null, true));
 }
 document.getElementById("historial-mas").addEventListener("click", () => { ui.historyLimit += 40; renderHistory(); });
 
@@ -774,6 +774,7 @@ function renderCampaigns() {
   const box = document.getElementById("campanas");
   box.replaceChildren();
   const live = campaignList.filter((c) => c.actionable > 0);
+  box.classList.remove("cargando");
   box.hidden = live.length === 0;
   live.forEach((c) => {
     const card = el("div", "campana " + c.risk);

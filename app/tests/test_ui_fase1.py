@@ -22,13 +22,20 @@ def demo(monkeypatch):
 def test_policy_shows_the_real_thresholds(demo):
     resp = demo.get("/api/policy")
     assert resp.status_code == 200
-    assert resp.json() == {"medium": MEDIUM_AT, "high": HIGH_AT} == {"medium": 30, "high": 60}
+    assert (
+        resp.json()
+        == {"medium": MEDIUM_AT, "high": HIGH_AT}
+        == {"medium": 30, "high": 60}
+    )
 
 
 @pytest.mark.parametrize("method", ["put", "post", "patch", "delete"])
 def test_policy_cannot_be_changed_from_the_web(demo, method):
     # Los umbrales son del codigo (app/decision.py): ningun metodo de escritura existe.
-    assert demo.request(method.upper(), "/api/policy", json={"high": 10}).status_code == 405
+    assert (
+        demo.request(method.upper(), "/api/policy", json={"high": 10}).status_code
+        == 405
+    )
     assert demo.get("/api/policy").json()["high"] == 60
 
 
@@ -44,33 +51,55 @@ def _text(name):
 def test_panel_has_no_threshold_controls_or_auto_quarantine():
     html = _text("index.html")
     js = _text("app.js")
-    assert 'type="range"' not in html and "range" not in re.findall(r'type="(\w+)"', html)
-    for banned in ("Cuarentena automática", "cuarentena automática", "autoQuarantine", "cfgHighSlider"):
+    assert 'type="range"' not in html and "range" not in re.findall(
+        r'type="(\w+)"', html
+    )
+    for banned in (
+        "Cuarentena automática",
+        "cuarentena automática",
+        "autoQuarantine",
+        "cfgHighSlider",
+    ):
         assert banned not in html and banned not in js
     # no se puede escribir en la politica desde el cliente
-    assert not re.search(r"api\(\s*[\"']/api/policy[\"']\s*,\s*[\"'](PUT|POST|PATCH)", js)
+    assert not re.search(
+        r"api\(\s*[\"']/api/policy[\"']\s*,\s*[\"'](PUT|POST|PATCH)", js
+    )
 
 
 def test_static_files_load_nothing_from_outside():
-    for path in list(STATIC.glob("*.html")) + list(STATIC.glob("*.css")) + list(STATIC.glob("*.js")):
+    for path in (
+        list(STATIC.glob("*.html"))
+        + list(STATIC.glob("*.css"))
+        + list(STATIC.glob("*.js"))
+    ):
         text = path.read_text(encoding="utf-8")
         # el espacio de nombres xmlns de un SVG no es una descarga; todo lo demas si lo seria
         text = text.replace("http://www.w3.org/2000/svg", "")
-        assert not re.search(r"""(src|href)=["']//""", text), path.name  # enlaces sin protocolo
+        assert not re.search(r"""(src|href)=["']//""", text), (
+            path.name
+        )  # enlaces sin protocolo
         assert "http://" not in text and "https://" not in text, path.name
         assert "@import" not in text, path.name
 
 
 def test_icons_are_local_and_use_no_scripts():
     sprite = _text("icons/sprite.svg")
-    assert "<script" not in sprite.lower() and "href=\"http" not in sprite
+    assert "<script" not in sprite.lower() and 'href="http' not in sprite
     assert (STATIC / "icons" / "LICENSE-lucide.txt").exists()
 
 
 def test_no_dangerous_dom_sinks_anywhere_in_the_panel():
     for js in STATIC.glob("*.js"):
         text = js.read_text(encoding="utf-8")
-        for sink in (".innerHTML", ".outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function"):
+        for sink in (
+            ".innerHTML",
+            ".outerHTML",
+            "insertAdjacentHTML",
+            "document.write",
+            "eval(",
+            "new Function",
+        ):
             assert sink not in text, (js.name, sink)
 
 

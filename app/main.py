@@ -28,11 +28,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app import campaigns, logsafe
-from app.decision import HIGH_AT, MEDIUM_AT
 from app.admin import AdminAuth, build_admin_router
 from app.alerts import SecurityNotifier, SmtpConfig
 from app.auth import AuthContext, build_router, revoke_google_token
 from app.db import Database
+from app.decision import HIGH_AT, MEDIUM_AT
 from app.identity import parse_email_list
 from app.llm import Explainer, explainer_from_env
 from app.models import Alert, Coverage, Status
