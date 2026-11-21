@@ -176,6 +176,6 @@ Revisamos actividad reciente en su cuenta de Google. Puede revisarla aquí: http
 - **Probá:** Debe quedar en «Sin riesgo»: es una limitación real (ver nota). Probá aislarlo a mano con motivo.
 
 ### Qué NO cubre esto todavía (hallazgo honesto)
-- **El remitente falso con dirección parecida a la marca** (la pista principal del ejemplo de York: una dirección como `googleacc` con la marca mal escrita) **solo se detecta si la marca está en la lista de Atalaya**, y hoy esa lista tiene **3 bancos** (Banco General, BNCR y BAC). Google, Microsoft, Netflix, Dropbox o PayPal **no están**.
+- **Resuelto (20 nov):** la lista de marcas ya incluye Google/Gmail, Microsoft, Netflix, Dropbox, PayPal, Apple, Amazon, Facebook, DHL y bancos/servicios de Panamá y Costa Rica, y detecta **un error de escritura** de la marca (`goggle`, `paypa1`, `micros0ft`). Ver `docs/RESULTADOS_PRUEBAS.md`.
+- **Sigue sin cubrirse:** marca pegada a otra palabra en marcas cortas (`googleacc`), `rn` por `m`, y marcas que no estén en la lista. Los dominios oficiales de la lista están pendientes de verificar.
 - Desde tu Gmail no se puede falsificar el remitente, así que esta prueba no lo ejercita; solo se ve en el código y en las pruebas.
-- Mejora propuesta: ampliar la lista a las marcas más suplantadas y detectar **errores de escritura de la marca** (p. ej. «Goggle»).
