@@ -20,6 +20,68 @@ Why this way rather than a cloud service: [ADR 0012](adr/0012-kit-autoalojado-en
 | A synchronized server clock (NTP) | A skewed clock once broke a real sign-in. Modern Linux does this on its own. |
 | (Optional) An Anthropic API key | Only if you want AI-written explanations. It is **off** by default (see section 9). |
 
+## How to install: two options
+
+### Option A (recommended): guided assistant
+
+The `tools/kit/instalar.py` assistant asks the questions, generates the keys and configuration files, starts Docker Compose, waits for the panel to answer and runs the verifier. It is meant for a non-expert IT person to finish in about 15 minutes. It uses only the Python standard library (3.9 or newer); it **downloads nothing, installs nothing on its own and sends no data to anyone** (the only network call is `/health` on `127.0.0.1`).
+
+**Before you start** you need: Docker with Compose v2, Python 3.9+ and the **Google OAuth client JSON** (sections 2 and 3 of this guide; keep it **outside** the kit folder, for example in Downloads). If you do not have it yet, the assistant shows the exact redirect URI to register and you can run it again later.
+
+```bash
+tools/kit/instalar.sh            # Linux / macOS
+```
+```powershell
+.\tools\kit\instalar.ps1        # Windows (PowerShell)
+```
+(or directly `python3 tools/kit/instalar.py`). If Python is missing, the wrapper explains how to get it and downloads nothing. For English use `--lang en` or `ATALAYA_LANG=en`.
+
+What it does, step by step:
+1. **Preflight checks:** Python, `docker` and `docker compose`, Docker running, write permission, disk space and free ports (8000, plus 80/443 with Caddy). If something is missing it tells you what to do; it does not install it.
+2. **Questions:** organization name; mode (*local* for evaluation or *production* with an HTTPS domain) and **the redirect URI to register in Google, highlighted**; admin emails (and optional read-only supervisors); path of the Google JSON (checks that it is a *Web application* client, that it includes that URI and that it is not inside a repository folder); proxy (the kit's Caddy, or your own and how many hops); and AI, **off by default** (if you enable it, it warns that masked text will be sent to Anthropic and asks for the key without echoing it).
+3. **Keys:** generates the Fernet key and the session secret. They are **never shown** on screen nor passed as arguments to any program. It offers to save a **copy of the Fernet key** wherever you choose (preferably another medium): without it, tokens and backups are unreadable.
+4. **Files:** writes `.env.kit` (mode `0600` on Linux/macOS; on Windows it uses `icacls`, best effort), creates `secrets/` and copies the JSON there. If a configuration already exists it **does not overwrite it without confirmation** and first keeps a dated copy (`.env.kit.bak-YYYYMMDD-HHMMSS`). With Caddy it puts your domain in the `Caddyfile`.
+5. **Start:** `docker compose build` and `up -d` (with `--profile tls` for Caddy), waits for `/health` (up to 2 minutes) and shows the summary: URL, administration, where backups go and the `tools/kit/respaldo.sh` commands, and next steps.
+6. **Verification:** runs `tools/kit/verificar_instalacion.py` and shows its result (the verifier needs Python 3.11+; on an older version the assistant says so and skips it).
+
+Useful flags: `--no-start` (only generate the configuration), `--check` (only verify an existing install), `--yes` (never asks: uses the flags `--org --mode --domain --admin --supervisors --google-json --proxy --hops --key-copy` or their environment variables; for automation), `--overwrite`, `--dir`, `--lang`, `--version`, `--help`. The Anthropic key is only accepted through the `ANTHROPIC_API_KEY` variable, never as a flag (arguments end up in shell history and the process list). Any failure exits non-zero with a clear message and no Python traceback.
+
+Example session (fictional data; abridged; shown in Spanish, which is the default, with `--lang en` the messages are in English):
+
+```text
+Asistente de instalacion de Atalaya 1.0.0
+[1/6] Comprobaciones previas
+  OK    Python 3.12
+  OK    Docker version 27.x ...
+  OK    Docker Compose version v2.x ...
+  OK    Espacio en disco: 40 GB libres
+  OK    Puerto 8000 libre
+[2/6] Preguntas
+  Nombre de la organizacion: My Organization
+  Modo (local/produccion/production) [local]: local
+  Registra EXACTAMENTE esta URI de redireccion en tu cliente OAuth de Google:
+    >>> http://localhost:8000/auth/google/callback <<<
+  Correo(s) de administracion, separados por comas: admin@example.org
+  OK    JSON de Google valido (tipo web, URI de redireccion incluida)
+  Activar la explicacion con IA? [s/N]: n
+[3/6] Claves y archivos
+  OK    Claves generadas (no se muestran)
+  OK    .env.kit escrito con permisos restringidos
+[4/6] Arranque con Docker Compose
+  OK    /health responde (modo gmail)
+[5/6] Verificacion de la instalacion
+  OK    ... (verifier output)
+[6/6] Resumen
+  Direccion del panel : http://localhost:8000
+Listo.
+```
+
+> **Honest status.** The assistant was tested with automated tests and a **fake** `docker` (orchestration, validations, no secret reaching the screen or process arguments, permissions, backup copy). It has **not been run against real Docker or with a Google Workspace organization**; the CI `kit` job exercises it with real Docker on push. Design decisions: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md) (in Spanish).
+
+### Option B: manual
+
+The following sections (evaluation mode and sections 2 to 6) are the complete manual procedure; they also explain what the assistant automates.
+
 ## Evaluation mode: 15 minutes on localhost
 
 No domain and no server: on your own machine with Docker.

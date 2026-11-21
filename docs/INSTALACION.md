@@ -20,6 +20,74 @@ Por qué así y no como servicio en la nube: [ADR 0012](adr/0012-kit-autoalojado
 | El reloj del servidor sincronizado (NTP) | Un reloj desfasado hizo fallar un inicio de sesión real. Linux moderno ya lo hace solo. |
 | (Opcional) Una clave de Anthropic | Solo si quieres explicaciones redactadas por IA. Está **apagada** por defecto (ver sección 9). |
 
+## Cómo instalar: dos opciones
+
+### Opción A (recomendada): asistente guiado
+
+El asistente `tools/kit/instalar.py` hace las preguntas, genera las claves y los archivos de configuración, arranca Docker Compose, espera a que el panel responda y ejecuta el verificador. Está pensado para que una persona de TI sin experiencia termine en unos 15 minutos. Solo usa la biblioteca estándar de Python (3.9 o superior); **no descarga nada, no instala nada por su cuenta y no envía datos a nadie** (la única red es `/health` en `127.0.0.1`).
+
+**Antes de empezar** necesitas: Docker con Compose v2, Python 3.9+ y el **JSON del cliente OAuth de Google** (secciones 2 y 3 de esta guía; guárdalo **fuera** de la carpeta del kit, por ejemplo en Descargas). Si aún no lo tienes, el asistente te muestra la URI de redirección exacta que debes registrar y puedes repetirlo después.
+
+```bash
+tools/kit/instalar.sh            # Linux / macOS
+```
+```powershell
+.\tools\kit\instalar.ps1        # Windows (PowerShell)
+```
+(o directamente `python3 tools/kit/instalar.py`). Si falta Python, el envoltorio lo explica y no descarga nada. Para inglés: `--lang en` o `ATALAYA_LANG=en`.
+
+Qué hace, paso a paso:
+1. **Comprobaciones previas:** Python, `docker` y `docker compose`, que Docker esté en marcha, permiso de escritura, espacio en disco y puertos libres (8000, y 80/443 si usas Caddy). Si falta algo, te dice qué hacer; no lo instala.
+2. **Preguntas:** nombre de la organización; modo (*local* para evaluar o *producción* con dominio HTTPS) y **la URI de redirección que debes registrar en Google, resaltada**; correos de administración (y, opcional, de supervisión de solo lectura); ruta del JSON de Google (comprueba que sea de tipo *Aplicación web*, que incluya esa URI y que no esté dentro de una carpeta de repositorio); proxy (el Caddy del kit, o el tuyo y cuántos saltos hay); y la IA, **apagada por defecto** (si la activas, te avisa de que se enviará texto enmascarado a Anthropic y pide la clave sin mostrarla).
+3. **Claves:** genera la clave Fernet y el secreto de sesión. **Nunca se muestran** en pantalla ni se pasan como argumentos de ningún programa. Te ofrece guardar una **copia de la clave Fernet** donde tú elijas (mejor en otro medio): sin ella, los tokens y los respaldos son ilegibles.
+4. **Archivos:** escribe `.env.kit` (permisos `0600` en Linux/macOS; en Windows usa `icacls`, mejor esfuerzo), crea `secrets/` y copia allí el JSON. Si ya existe una configuración, **no la sobrescribe sin confirmación** y guarda antes una copia con fecha (`.env.kit.bak-AAAAMMDD-HHMMSS`). Con Caddy, pone tu dominio en el `Caddyfile`.
+5. **Arranque:** `docker compose build` y `up -d` (con `--profile tls` si usas Caddy), espera a `/health` (hasta 2 minutos) y muestra el resumen: URL, administración, dónde están los respaldos y los comandos de `tools/kit/respaldo.sh`, y los siguientes pasos.
+6. **Verificación:** ejecuta `tools/kit/verificar_instalacion.py` y muestra su resultado (el verificador necesita Python 3.11+; con una versión anterior, el asistente lo avisa y lo omite).
+
+Banderas útiles: `--sin-arranque` (solo genera la configuración), `--verificar` (solo verifica una instalación hecha), `--si` (no pregunta nada: usa las banderas `--org --modo --dominio --admin --supervisores --google-json --proxy --saltos --copia-clave` o sus variables de entorno; sirve para automatizar), `--sobrescribir`, `--dir`, `--lang`, `--version`, `--ayuda`. La clave de Anthropic solo se acepta por la variable `ANTHROPIC_API_KEY`, nunca como bandera (los argumentos quedan en el historial y en la lista de procesos). Cualquier fallo termina con código distinto de cero y un mensaje claro, sin trazas de Python.
+
+Sesión de ejemplo (datos ficticios; resumida):
+
+```text
+Asistente de instalacion de Atalaya 1.0.0
+[1/6] Comprobaciones previas
+  OK    Python 3.12
+  OK    Docker version 27.x ...
+  OK    Docker Compose version v2.x ...
+  OK    Espacio en disco: 40 GB libres
+  OK    Puerto 8000 libre
+[2/6] Preguntas
+  Nombre de la organizacion: Mi Organizacion
+  Modo (local/produccion/production) [local]: local
+  Registra EXACTAMENTE esta URI de redireccion en tu cliente OAuth de Google:
+    >>> http://localhost:8000/auth/google/callback <<<
+  Correo(s) de administracion, separados por comas: admin@example.org
+  Ruta del JSON de credenciales de Google (tipo Aplicacion web): ~/Descargas/client_secret_demo.json
+  OK    JSON de Google valido (tipo web, URI de redireccion incluida)
+  Activar la explicacion con IA? [s/N]: n
+[3/6] Claves y archivos
+  OK    Claves generadas (no se muestran)
+  OK    .env.kit escrito con permisos restringidos
+  Guardar ahora una copia de la clave en una ruta que elijas? [S/n]: s
+  Ruta del archivo de copia (de preferencia en otro medio): /media/usb/atalaya-clave.txt
+[4/6] Arranque con Docker Compose
+  OK    Imagen construida
+  OK    Contenedores en marcha
+  OK    /health responde (modo gmail)
+[5/6] Verificacion de la instalacion
+  OK    ... (salida del verificador)
+[6/6] Resumen
+  Direccion del panel : http://localhost:8000
+  Siguientes pasos: abre el panel, inicia sesion y crea la primera invitacion.
+Listo.
+```
+
+> **Estado honesto.** El asistente se probó con pruebas automáticas y un `docker` **falso** (orquestación, validaciones, que ningún secreto salga por pantalla ni por argumentos, permisos, copia de respaldo). **No se ejecutó contra Docker real ni con una organización de Google Workspace**; el trabajo `kit` del CI lo ejercita con Docker real al subir. Decisiones de diseño: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md).
+
+### Opción B: manual
+
+Las secciones siguientes (modo evaluación y secciones 2 a 6) son el procedimiento manual completo; sirven también para entender qué automatiza el asistente.
+
 ## Modo evaluación en 15 minutos en localhost
 
 Sin dominio y sin servidor: en tu propio equipo con Docker.
