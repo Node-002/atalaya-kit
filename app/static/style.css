@@ -131,7 +131,8 @@ body:not([data-vista="panel"]) .detalle { display: none; }
 .barra .btn { flex: none; white-space: nowrap; }
 .demo-banner, .rol-banner { flex: none; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 var(--s2); text-align: center; padding: var(--s2) var(--s5); font-size: var(--fs-sm); border-bottom: 1px solid var(--accent-line); background: var(--accent-bg); }
 .rol-banner { background: rgba(167, 139, 250, .14); border-bottom-color: rgba(167, 139, 250, .45); }
-#contenido { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s5); outline: none; }
+#contenido { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s5); }
+#contenido:focus-visible { outline: 2px solid #93c5fd; outline-offset: -2px; }
 .vista { max-width: 980px; margin: 0 auto; }
 .vista > h2 { margin: 0 0 var(--s2); }
 footer { flex: none; padding: var(--s2) var(--s5); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs); }
@@ -173,7 +174,8 @@ footer p { margin: 0; }
 .kpi.media { border-top: 3px solid var(--medium); } .kpi.media .kpi-n { color: var(--medium-text); }
 .kpi.baja { border-top: 3px solid var(--low); } .kpi.baja .kpi-n { color: var(--low-text); }
 
-/* --- Campanas --- */
+/* --- Campanas (mientras llegan los datos, ocupan el sitio de la tarjeta para que nada salte) --- */
+.campanas.cargando { min-height: 108px; }
 .campana { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; justify-content: space-between; padding: var(--s3) var(--s4); margin: 0 0 var(--s3); border: 1px solid var(--high-line); border-left: 6px solid var(--high); border-radius: var(--r-md); background: var(--card); }
 .campana.medium { border-color: var(--medium-line); border-left-color: var(--medium); }
 .campana .info { flex: 1 1 260px; word-break: break-word; }
@@ -359,6 +361,8 @@ body > footer { max-width: 640px; margin: 0 auto; border: 0; padding: var(--s4) 
   .velo { position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, .6); }
   body.det-abierto .velo { display: block; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panel-estado { min-height: 146px; }
+  .campanas.cargando { min-height: 136px; }
 }
 @media (max-width: 799px) {
   .app, body:not([data-vista="panel"]) .app { grid-template-columns: minmax(0, 1fr); }
@@ -377,7 +381,8 @@ body > footer { max-width: 640px; margin: 0 auto; border: 0; padding: var(--s4) 
   .demo-banner, .rol-banner { padding: var(--s2) var(--s3); text-align: left; justify-content: flex-start; }
   .btn { min-height: 44px; }
   .filtro { min-height: 40px; }
-  .panel-estado { padding: var(--s3) var(--s4); }
+  .panel-estado { padding: var(--s3) var(--s4); min-height: 156px; }
+  .campanas.cargando { min-height: 164px; }
   .panel-estado .btn { width: 100%; }
   .campana { flex-direction: column; align-items: stretch; }
   .campana .btn { width: 100%; }
