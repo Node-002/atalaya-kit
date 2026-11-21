@@ -160,3 +160,62 @@ details.tecnico > summary:focus-visible { outline: 3px solid var(--accent); outl
 /* --- Supervisor y reporte --- */
 .rol-banner { background: #2b2438; border-bottom: 1px solid #4b3f6b; padding: 10px 20px; font-size: .95rem; }
 .reporte { margin: 8px 0 14px; flex-wrap: wrap; }
+
+/* --- Pulido: contraste, avisos, movil y movimiento --- */
+.btn-primary { background: #17692c; border-color: #2ea043; color: #fff; }
+.btn { min-height: 40px; transition: border-color .15s, background-color .15s; }
+.btn:hover { background: #2a313a; }
+.btn-primary:hover { background: #1c7f35; }
+.btn-danger { color: #ffd7d3; }
+a { color: var(--accent); }
+a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, dialog:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mensaje:not(:empty) { padding: 10px 14px; border-radius: 8px; background: #12202f; border: 1px solid #1f4068; border-left: 5px solid var(--accent); color: var(--text); margin: 12px 0; }
+.demo-banner, .rol-banner { text-align: center; }
+.estrecho { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-top: 28px; margin-bottom: 20px; padding: 24px 28px; }
+.hero { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.hero h2 { margin: 0; }
+.hero .nota { margin: 2px 0 0; }
+.escudo { flex: none; color: var(--accent); }
+.hero.ok .escudo { color: var(--low); }
+.puntos { list-style: none; padding-left: 0; }
+.puntos li { padding-left: 26px; position: relative; }
+.puntos li::before { content: "\2713"; position: absolute; left: 4px; color: var(--low); font-weight: 700; }
+h3.no + .puntos li::before { content: "\2715"; color: var(--high); }
+.aceptar { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #12202f; }
+.aceptar label { cursor: pointer; }
+#conectar { width: 100%; min-height: 48px; font-size: 1.05rem; }
+#conectar[disabled] { opacity: .45; }
+#form .btn { width: 100%; min-height: 46px; }
+.btn[disabled] { filter: saturate(.5); }
+
+@media (max-width: 600px) {
+  main { padding: 14px; }
+  .top { padding: 12px 14px; }
+  .top-actions { width: 100%; }
+  .top-actions .btn { flex: 1 1 auto; }
+  .btn { min-height: 44px; }
+  .cards-buzon { grid-template-columns: 1fr; }
+  .campana { flex-direction: column; align-items: stretch; }
+  .campana .btn { width: 100%; }
+  .estrecho { margin: 12px; padding: 18px; }
+  .tabs { padding: 0 8px; }
+  .fila { flex-wrap: wrap; }
+  dialog { width: calc(100% - 16px); }
+}
+
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .panel:not([hidden]) { animation: entra .28s ease-out; }
+  .estrecho, .demo-banner, .rol-banner, .seguridad { animation: entra .35s ease-out; }
+  .animar .cbuzon, .animar .campana, .animar details.card { animation: entra .35s ease-out both; }
+  .animar .cbuzon:nth-child(2), .animar details.card:nth-child(2) { animation-delay: .06s; }
+  .animar .cbuzon:nth-child(3), .animar details.card:nth-child(3) { animation-delay: .12s; }
+  .animar .cbuzon:nth-child(n+4), .animar details.card:nth-child(n+4) { animation-delay: .18s; }
+  dialog[open] { animation: entra .2s ease-out; }
+  dialog[open]::backdrop { animation: aparecer .2s ease-out; }
+  .mensaje:not(:empty) { animation: entra .25s ease-out; }
+}
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
