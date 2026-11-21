@@ -95,8 +95,12 @@
         </div>
         <div class="barra-sel oculto-mov">
           <svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-layers"/></svg>
-          <label for="filtro" class="sr-only">Ver buzón</label>
-          <select id="filtro" class="select-limpio"><option value="">Todos los buzones</option></select>
+          <label for="filtro-area" class="sr-only">Filtrar por área</label>
+          <select id="filtro-area" class="select-limpio"><option value="">Todas las áreas</option></select>
+        </div>
+        <div hidden>
+          <label for="filtro">Ver buzón</label>
+          <select id="filtro"><option value="">Todos los buzones</option></select>
         </div>
         <div class="barra-der">
           <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
@@ -190,8 +194,8 @@
                 <p id="analitica-sub" class="nota">Cifras calculadas con las alertas guardadas de tus buzones.</p>
               </div>
               <div id="rango" class="segmentos" role="group" aria-label="Rango de tiempo">
-                <button type="button" class="seg" data-rango="24h" aria-pressed="true">24h</button>
-                <button type="button" class="seg" data-rango="7d" aria-pressed="false">7d</button>
+                <button type="button" class="seg" data-rango="24h" aria-pressed="false">24h</button>
+                <button type="button" class="seg" data-rango="7d" aria-pressed="true">7d</button>
                 <button type="button" class="seg" data-rango="30d" aria-pressed="false">30d</button>
               </div>
             </div>
@@ -218,20 +222,22 @@
                 </div>
               </section>
             </div>
-            <section aria-labelledby="titulo-por-buzon">
-              <div class="cab-sec">
-                <h3 id="titulo-por-buzon" class="sec-t"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-users"/></svg> Análisis por buzón</h3>
-                <p class="nota">Volumen analizado, severidad, tasa de riesgo y vector principal de cada buzón, de mayor a menor riesgo.</p>
-              </div>
-              <div id="buzon-cards" class="cards3"></div>
-              <div class="tabla-caja">
-                <div class="tabla tabla-buzon" role="table" aria-label="Comparativa por buzón">
-                  <div class="tabla-cab" role="row">
-                    <span role="columnheader">Buzón</span><span role="columnheader" class="der">Analizados</span><span role="columnheader" class="der">Altas</span><span role="columnheader" class="der">Medias</span><span role="columnheader" class="der">Bajas</span><span role="columnheader">Tasa de riesgo</span><span role="columnheader" class="c-vector">Vector principal</span>
-                  </div>
-                  <div id="tabla-buzon"></div>
+            <section aria-labelledby="titulo-por-area">
+              <div class="cab-sec cab-sec-fila">
+                <div>
+                  <h3 id="titulo-por-area" class="sec-t"><svg class="ico" aria-hidden="true" focusable="false"><use href="/static/icons/sprite.svg#i-building-2"/></svg> <span id="titulo-por-area-t">Análisis detallado por área</span></h3>
+                  <p class="nota">Comparativa de volumen analizado, severidad, tasa de riesgo, vector dominante y buzón más atacado de cada área.</p>
                 </div>
-                <div class="tabla-pie"><span id="tabla-buzon-res" class="mono"></span><button id="tabla-buzon-mas" type="button" class="btn btn-sm" hidden>Mostrar más</button></div>
+                <span class="pill-neutro mono">Ordenado por tasa de riesgo ↓</span>
+              </div>
+              <div id="area-cards" class="cards3"></div>
+              <div class="tabla-caja">
+                <div class="tabla tabla-area" role="table" aria-label="Comparativa por área">
+                  <div class="tabla-cab" role="row">
+                    <span role="columnheader">Área</span><span role="columnheader" class="der">Buzones</span><span role="columnheader" class="der">Analizados</span><span role="columnheader" class="der">Altas</span><span role="columnheader" class="der">Medias</span><span role="columnheader" class="der">Bajas</span><span role="columnheader">Tasa de riesgo</span><span role="columnheader" class="c-vector">Vector principal</span>
+                  </div>
+                  <div id="tabla-area"></div>
+                </div>
               </div>
             </section>
           </div>
@@ -256,7 +262,7 @@
             <div class="tabla-caja">
               <div class="tabla tabla-usuarios" role="table" aria-label="Buzones conectados">
                 <div class="tabla-cab" role="row">
-                  <span role="columnheader">Empleado</span><span role="columnheader">Buzón corporativo</span><span role="columnheader" class="c-vector">Último chequeo</span><span role="columnheader">Nivel de riesgo</span><span role="columnheader" class="der">Acción</span>
+                  <span role="columnheader">Empleado</span><span role="columnheader">Área</span><span role="columnheader">Buzón corporativo</span><span role="columnheader" class="c-vector">Último chequeo</span><span role="columnheader">Nivel de riesgo</span><span role="columnheader" class="der">Acción</span>
                 </div>
                 <div id="buzones"></div>
               </div>
@@ -368,6 +374,8 @@
       <p>Escribe el nombre o puesto de la persona. Se creará un enlace de <strong>un solo uso</strong> que vence en 48 horas. Envíaselo por un canal que uses con ella.</p>
       <label for="inv-label">Nombre o puesto</label>
       <input id="inv-label" type="text" maxlength="80" placeholder="Ej.: Ana Ruiz - Recursos Humanos" required>
+      <label for="inv-area">Área de la persona</label>
+      <select id="inv-area"></select>
       <div id="inv-resultado" hidden>
         <label for="inv-url">Enlace de invitación (se muestra solo ahora)</label>
         <div class="fila">

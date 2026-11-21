@@ -106,6 +106,7 @@ class Alert(BaseModel):
     # Huellas (hash) para agrupar campanas entre buzones; nunca el remitente ni el asunto.
     sender_key: str = ""
     topic_key: str = ""
+    department: str = "Sin área"  # area del buzon (dato de la organizacion, no del correo)
     ficha: Ficha | None = None  # alertas viejas: None ("Sin datos tecnicos guardados")
 
     @computed_field  # type: ignore[prop-decorator]
@@ -153,3 +154,4 @@ class Coverage(BaseModel):
     account: str
     status: ConnectionStatus
     last_check: datetime | None = None  # ultima vez que Atalaya reviso este buzon
+    department: str = "Sin área"
