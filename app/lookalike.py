@@ -114,18 +114,40 @@ def _within_one_edit(a: str, b: str) -> bool:
     return any(long_[:i] + long_[i + 1 :] == short for i in range(len(long_)))
 
 
+# Palabras que los estafadores pegan a la marca ('securepaypal', 'googleacc').
+_AFFIXES = (
+    "secure", "support", "soporte", "login", "signin", "verify", "verifica",
+    "account", "acc", "help", "ayuda", "service", "servicio", "billing", "update",
+    "alert", "security", "seguridad", "team", "online", "mail", "id", "pay", "pagos",
+)  # fmt: skip
+
+
+def _has_affixed_brand(token: str, brand: str) -> bool:
+    if len(brand) < 5 or brand == token:
+        return False
+    return any(token in (brand + w, w + brand) for w in _AFFIXES)
+
+
 def mentions_brand(stem: str, brand: str) -> bool:
     """Marcas cortas (bac, bncr) solo cuentan como palabra completa del dominio,
     para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte.
     Marcas de 6+ letras tambien con UN error de escritura en la palabra ('goggle',
-    'paypa1'); las mas cortas no, porque 'happy' o 'tigre' no son 'yappy' ni 'tigo'."""
+    'paypa1'); las mas cortas no, porque 'happy' o 'tigre' no son 'yappy' ni 'tigo'.
+    Tambien se unen palabras vecinas separadas por guion ('pay-pal') y se aceptan
+    marcas de 5+ letras con una palabra tipica de estafa pegada ('securepaypal')."""
     brand = fold(brand)
-    tokens = re.split(r"[^a-z0-9]+", stem)
+    tokens = [t for t in re.split(r"[^a-z0-9]+", stem) if t]
     if brand in tokens or (len(brand) >= 8 and brand in stem):
         return True
-    return len(brand) >= 6 and any(
-        len(t) >= 6 and _within_one_edit(t, brand) for t in tokens
-    )
+    if any(_has_affixed_brand(t, brand) for t in tokens):
+        return True
+    if len(brand) < 6:
+        return False
+    # candidatos: palabras sueltas y pares/ternas vecinas unidas ('micro-soft')
+    cands = list(tokens)
+    for n in (2, 3):
+        cands += ["".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
+    return any(len(t) >= 6 and _within_one_edit(t, brand) for t in cands)
 
 
 def mentions_brand_name(folded_name: str, aliases: tuple[str, ...]) -> bool:

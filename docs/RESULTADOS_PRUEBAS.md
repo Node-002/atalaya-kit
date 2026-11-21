@@ -80,3 +80,26 @@ Se añadieron 18 correos sintéticos (`.example`): 10 de phishing (P15–P24) y 
 - Los dominios oficiales están escritos de memoria y **hay que verificarlos**: si falta uno legítimo (p. ej. un dominio regional de Amazon o Tigo), sus correos se marcarían como falsos.
 - «Meta» (Facebook) no se busca como palabra suelta porque en español es corriente; solo `facebook` y «Meta Platforms».
 
+
+## Revisión de falsos negativos y positivos en dominios y enlaces (20 nov, noche)
+Se probaron a mano ~35 casos adversos (subdominios engañosos, arrobas en enlaces, guiones, mayúsculas, puntos finales, puertos). **No cambian las métricas del corpus** (siguen 21/24 detectados y 3/24 falsos positivos, igual que antes de esta revisión); los casos nuevos están en `app/tests/test_brands.py`. No se cambió ningún peso ni umbral.
+
+**Corregido (con pruebas):**
+| Problema | Antes | Ahora |
+|---|---|---|
+| `google.com.` (punto final, válido en DNS) | se marcaba como falso (**falso positivo**) | oficial |
+| `bit.ly.`, `bit.ly:80` | acortador **no** detectado | detectado |
+| `http://paypal.com@evil.example/` | marcado solo de casualidad; el host real se leía mal | se analiza el host real (lo que hay tras la `@`) y el texto anterior se trata como lo que la persona creería ver |
+| `hxxp://…`, `//…` | host mal leído | se reconocen |
+| `pay-pal`, `micro-soft`, `net-flix` (guion partiendo la marca) | **no** detectado | detectado |
+| `securepaypal`, `googleacc`, `applesupport` (marca + palabra típica de estafa) | **no** detectado | detectado (lista corta de palabras; `amazonas` y `applesauce` no se marcan) |
+| Respuesta a `empresa.com` desde `mail.empresa.com` | `reply_to_mismatch` (**falso positivo**, 20 pts) | no se marca; `empresa.com.evil.example` y `notempresa.com` sí |
+
+**Ya funcionaba y quedó con prueba:** `bancogeneral.com.evil.example`, `google.com.pa.evil.example`, mezcla de alfabetos, punycode, mayúsculas, marca solo en la ruta de la URL (no se marca, correcto) y `\` en la URL (el navegador lo trata como `/`).
+
+**No resuelto (decisión documentada, sin cambiar pesos):**
+- **Enlaces a una IP** (`http://192.168.1.1/google`) o a dominios sin marca no generan señal. Una señal nueva exigiría un peso nuevo; lo dejo para decidirlo.
+- **Correos sin cabecera `Authentication-Results`** no suman puntos de SPF/DKIM/DMARC (solo `dkim=none` explícito). Podría ser un falso negativo; cambiarlo afecta a los pesos y no lo toqué.
+- **Nombre visible** con la marca como palabra normal («Apple Pie Bakery», «Amazon Tours») se marca (`display_name_brand`, 30 pts = medio). Es el costo de buscar el nombre de marca como palabra completa.
+- **Dominios legítimos de una marca que no estén en la lista** (p. ej. `googleusercontent.com`, `googleapis.com` usados en enlaces) se marcarían como falsos. Lista de oficiales pendiente de verificar.
+- `rnicrosoft` (`rn` por `m`) y otros confundibles visuales no se cubren.

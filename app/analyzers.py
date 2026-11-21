@@ -102,7 +102,7 @@ INJECTION_PATTERNS = (
 
 def domain_of(address: str) -> str:
     _, addr = parseaddr(address)
-    return addr.rsplit("@", 1)[-1].lower() if "@" in addr else ""
+    return addr.rsplit("@", 1)[-1].lower().rstrip(".") if "@" in addr else ""
 
 
 def _auth(msg: Message) -> list[Signal]:
@@ -136,7 +136,7 @@ def _auth(msg: Message) -> list[Signal]:
 
 
 def _reply_to(msg: Message) -> list[Signal]:
-    if msg.reply_to and domain_of(msg.reply_to) != domain_of(msg.sender):
+    if msg.reply_to and not _same_org(domain_of(msg.reply_to), domain_of(msg.sender)):
         return [
             Signal(
                 code="reply_to_mismatch",
@@ -147,16 +147,31 @@ def _reply_to(msg: Message) -> list[Signal]:
     return []
 
 
-def _candidate_hosts(msg: Message) -> list[str]:
-    """Dominios que una persona veria: remitente, respuesta y enlaces."""
-    hosts = [domain_of(msg.sender)]
+def link_parts(link: str) -> tuple[str, str]:
+    """(texto antes de '@', host real) de un enlace. El host real es lo que hay DESPUES
+    de la arroba ('http://paypal.com@evil.example' va a evil.example), sin puerto ni
+    punto final. Entiende 'hxxp://' y '//'."""
+    rest = re.sub(r"^[a-z][a-z0-9+.-]*:(?://)?|^//", "", link.strip().lower())
+    authority = re.split(r"[/?#\\]", rest, maxsplit=1)[0]
+    userinfo, _, hostport = authority.rpartition("@")
+    host = hostport if hostport.startswith("[") else hostport.split(":")[0]
+    return userinfo, host.rstrip(".")
+
+
+def _same_org(a: str, b: str) -> bool:
+    """Mismo dominio o uno es subdominio del otro (mail.empresa.com / empresa.com)."""
+    return a == b or a.endswith("." + b) or b.endswith("." + a)
+
+
+def _candidate_hosts(msg: Message) -> list[tuple[str, str]]:
+    """(lo que una persona leeria, host real): remitente, respuesta y enlaces."""
+    hosts = [(domain_of(msg.sender),) * 2]
     if msg.reply_to:
-        hosts.append(domain_of(msg.reply_to))
+        hosts.append((domain_of(msg.reply_to),) * 2)
     for link in msg.links:
-        hosts.append(
-            re.sub(r"^https?://", "", link.lower()).split("/")[0].split(":")[0]
-        )
-    return [h for h in hosts if h]
+        userinfo, host = link_parts(link)
+        hosts.append((f"{userinfo}.{host}" if userinfo else host, host))
+    return [(shown, real) for shown, real in hosts if real]
 
 
 def _impersonation(msg: Message) -> list[Signal]:
@@ -164,15 +179,15 @@ def _impersonation(msg: Message) -> list[Signal]:
     lookalike_dom: str | None = None
     trick = False
     mixed_dom: str | None = None
-    for dom in _candidate_hosts(msg):
+    for shown, dom in _candidate_hosts(msg):
         ascii_dom = lookalike.to_ascii(dom)
-        stem = lookalike.fold(lookalike.to_unicode(dom))
+        stem = lookalike.fold(lookalike.to_unicode(shown))
         for brand, official in BRANDS.items():
             if lookalike.mentions_brand(stem, brand) and not lookalike.is_official(
                 ascii_dom, official
             ):
                 lookalike_dom = lookalike_dom or ascii_dom
-                trick = trick or lookalike.uses_special_characters(dom)
+                trick = trick or lookalike.uses_special_characters(shown)
         if mixed_dom is None and lookalike.is_mixed_script(dom):
             mixed_dom = ascii_dom
     signals: list[Signal] = []
@@ -224,8 +239,7 @@ def _display_name(msg: Message) -> list[Signal]:
 
 def _links(msg: Message) -> list[Signal]:
     for link in msg.links:
-        host = re.sub(r"^https?://", "", link.lower()).split("/")[0]
-        if host in SHORTENERS:
+        if link_parts(link)[1] in SHORTENERS:
             return [
                 Signal(
                     code="shortened_link",

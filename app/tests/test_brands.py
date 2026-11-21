@@ -140,3 +140,92 @@ def test_one_edit_helper():
     f = lookalike._within_one_edit
     assert f("google", "goggle") and f("google", "googel") and f("google", "gogle")
     assert not f("google", "googol") and not f("google", "goo")
+
+
+# --- Revision de falsos negativos y positivos en dominios y enlaces ---
+
+
+def test_link_parts_real_host():
+    f = analyzers.link_parts
+    assert f("http://paypal.com@evil.example/x") == ("paypal.com", "evil.example")
+    assert f("https://User:pw@Evil.Example:8080/x") == ("user:pw", "evil.example")
+    assert f("HTTPS://WWW.GOOGLE.COM./x") == ("", "www.google.com")
+    assert f("hxxp://paypal-login.example/x")[1] == "paypal-login.example"
+    assert f("//paypal-login.example/x")[1] == "paypal-login.example"
+    assert f(r"http://google.com\@evil.example/")[1] == "google.com"  # '\' = '/'
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "http://paypal.com@evil.example/login",  # arroba: el host real es otro
+        "http://www.google.com@evil.example/",
+        "http://paypal.com.evil.example/login",  # subdominio engañoso
+        "http://bancogeneral.com.evil.example/",
+        "//paypal-login.example/x",
+        "hxxp://paypal-login.example/x",
+    ],
+)
+def test_deceptive_links_are_flagged(link):
+    assert "lookalike_domain" in _codes("x <a@neutro.example>", links=[link])
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://www.google.com./x",  # punto final: sigue siendo oficial
+        "http://www.google.com:443/x",
+        "https://evil.example/paypal.com/login",  # la marca solo en la ruta
+        r"http://google.com\@evil.example/x",  # '\' equivale a '/': host real google.com
+        "https://accounts.google.com/signin",
+    ],
+)
+def test_legit_looking_links_are_not_flagged(link):
+    assert "lookalike_domain" not in _codes("x <a@neutro.example>", links=[link])
+
+
+def test_shortener_with_port_or_trailing_dot_or_case():
+    for link in ("http://BIT.LY/a", "http://bit.ly./a", "http://bit.ly:80/a"):
+        assert "shortened_link" in _codes("x <a@neutro.example>", links=[link]), link
+
+
+def test_trailing_dot_in_sender_domain():
+    assert "lookalike_domain" not in _codes("x <a@google.com.>")
+
+
+@pytest.mark.parametrize(
+    "sender",
+    [
+        "x <a@pay-pal.example>",  # guion partiendo la marca
+        "x <a@micro-soft.example>",
+        "x <a@net-flix-pagos.example>",
+        "x <a@securepaypal.example>",  # marca + palabra tipica de estafa
+        "x <a@googleacc.example>",
+        "x <a@applesupport.example>",
+        "x <a@bancogeneral.com.evil.example>",
+        "x <a@google.com.pa.evil.example>",
+    ],
+)
+def test_hyphen_split_affixed_and_deceptive_subdomain_flagged(sender):
+    assert "lookalike_domain" in _codes(sender)
+
+
+def test_affix_rule_does_not_catch_unrelated_words():
+    for sender in ("x <a@amazonas-turismo.example>", "x <a@applesauce.example>"):
+        assert "lookalike_domain" not in _codes(sender), sender
+
+
+def test_reply_to_in_same_organization_is_not_a_mismatch():
+    assert "reply_to_mismatch" not in _codes(
+        "x <a@mail.empresa.example>", reply_to="soporte@empresa.example"
+    )
+    assert "reply_to_mismatch" not in _codes(
+        "x <a@empresa.example>", reply_to="soporte@ayuda.empresa.example"
+    )
+    # pero un dominio que solo CONTIENE el nombre no es la misma organizacion
+    assert "reply_to_mismatch" in _codes(
+        "x <a@empresa.example>", reply_to="soporte@empresa.example.evil.example"
+    )
+    assert "reply_to_mismatch" in _codes(
+        "x <a@empresa.example>", reply_to="soporte@notempresa.example"
+    )
