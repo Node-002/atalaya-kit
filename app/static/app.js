@@ -41,6 +41,7 @@ function saveUi() {
 const cardOpen = new Map(); // id de alerta -> abierta o cerrada (se conserva al refrescar)
 let lastAlerts = []; // lo que se ve en «Correos» (con el filtro de buzón)
 let allAlerts = [];
+let campaignList = [];
 let lastCoverage = [];
 
 const alertsEl = document.getElementById("alertas");
@@ -160,7 +161,7 @@ function renderAlert(alert) {
     const needs = alert.quarantine_needs_reason;
     actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () =>
       act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.",
-        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aislás: queda en el informe del correo." } : null)));
+        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null)));
   }
   if (alert.status === "pending_approval") {
     actions.appendChild(button("Dejarlo donde está", "btn", () =>
@@ -361,13 +362,55 @@ async function load() {
   const coverage = await api("/api/coverage");
   renderCoverage(coverage);
   allAlerts = await api("/api/alerts");
+  campaignList = await api("/api/campaigns").catch(() => []);
   applyFilter();
 }
 
 function applyFilter() {
   lastAlerts = filtroEl.value ? allAlerts.filter((a) => a.mailbox_id === filtroEl.value) : allAlerts;
   renderSummary();
+  renderCampaigns();
   render();
+}
+
+// --- Campanas: el mismo ataque en varios buzones ---------------------------------------------
+function renderCampaigns() {
+  const box = document.getElementById("campanas");
+  box.replaceChildren();
+  const live = campaignList.filter((c) => c.actionable > 0);
+  box.hidden = live.length === 0;
+  live.forEach((c) => {
+    const card = el("div", "campana " + c.risk);
+    const info = el("div", "info");
+    info.appendChild(el("strong", "", "1 campaña en " + c.mailbox_count + " buzones"));
+    info.appendChild(el("span", "muted", " · " + c.sender_domain));
+    info.appendChild(el("div", "muted", c.mailboxes.join(", ")));
+    card.appendChild(info);
+    const n = c.actionable;
+    const label = n === c.mailbox_count ? "Poner en cuarentena en los " + n + " buzones" : "Poner en cuarentena los " + n + " restantes";
+    card.appendChild(button(label, c.pending ? "btn btn-danger" : "btn", () =>
+      actCampaign(c, "Cuarentena aplicada a " + n + " correos de la campaña. Nada se borró: puedes sacarlos de cuarentena uno por uno.")));
+    box.appendChild(card);
+  });
+}
+
+async function actCampaign(c, okMessage) {
+  try {
+    let body;
+    if (c.needs_reason) {
+      const reason = await askReason({
+        title: "Cuarentena en " + c.actionable + " buzones",
+        help: "Algunos de estos correos no estaban marcados como riesgo alto. Explica por qué los aíslas todos: el motivo queda en el informe de cada correo.",
+      });
+      if (reason === null) return;
+      body = { reason };
+    }
+    const res = await api("/api/campaigns/" + encodeURIComponent(c.id) + "/quarantine", "POST", body);
+    msgEl.textContent = res.failed ? okMessage + " " + res.failed + " no se pudieron aislar." : okMessage;
+    await load();
+  } catch (err) {
+    msgEl.textContent = err.message;
+  }
 }
 
 // --- Resumen de la organizacion --------------------------------------------------------------

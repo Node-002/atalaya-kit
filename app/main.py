@@ -24,14 +24,14 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import logsafe
+from app import campaigns, logsafe
 from app.admin import AdminAuth, build_admin_router
 from app.alerts import SecurityNotifier, SmtpConfig
 from app.auth import AuthContext, build_router, revoke_google_token
 from app.db import Database
 from app.identity import parse_email_list
 from app.llm import Explainer, explainer_from_env
-from app.models import Alert, Coverage
+from app.models import Alert, Coverage, Status
 from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider, demo_workforce
 from app.registry import Registry
@@ -245,6 +245,45 @@ def create_app(
     @app.get("/api/alerts", response_model=list[Alert])
     def list_alerts(mailbox_id: str | None = None) -> list[Alert]:
         return store.list(mailbox_id)
+
+    @app.get("/api/campaigns", response_model=list[campaigns.Campaign])
+    def list_campaigns() -> list[campaigns.Campaign]:
+        return campaigns.find_campaigns(store.list())
+
+    @app.post("/api/campaigns/{campaign_id}/quarantine")
+    def quarantine_campaign(
+        campaign_id: str, request: Request, body: DecisionIn | None = None
+    ) -> dict[str, int]:
+        found = next(
+            (c for c in campaigns.find_campaigns(store.list()) if c.id == campaign_id),
+            None,
+        )
+        if found is None:
+            raise HTTPException(status_code=404, detail="Campana no encontrada.")
+        ids = [
+            i
+            for i in found.alert_ids
+            if (alert := store.get(i)) and alert.status is not Status.quarantined
+        ]
+        if not ids:
+            raise HTTPException(status_code=409, detail="Todo ya esta en cuarentena.")
+        try:
+            done, failed = store.approve_many(
+                ids, actor_of(request), body.reason if body else None
+            )
+        except ReasonRequired as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        for alert in done:  # una entrada de auditoria por cada alerta, como la individual
+            registry.audit(
+                actor_of(request),
+                "alert_quarantine",
+                f"{alert.sender_domain} - {alert.mailbox_label or 'buzon'} (campana)",
+            )
+        if not done:
+            raise HTTPException(
+                status_code=502, detail="No se pudo completar la accion en el correo."
+            )
+        return {"quarantined": len(done), "failed": failed}
 
     @app.get("/api/alerts/{alert_id}", response_model=Alert)
     def get_alert(alert_id: str) -> Alert:
