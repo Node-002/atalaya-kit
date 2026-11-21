@@ -241,7 +241,7 @@ def check_client_json(path: str, base: str) -> list[tuple[str, str]]:
 def check_health(base: str, timeout: float = 8.0) -> list[tuple[str, str]]:
     url = base.rstrip("/") + "/health"
     try:
-        with urllib.request.urlopen(
+        with urllib.request.urlopen(  # nosec B310
             url, timeout=timeout
         ) as resp:  # URL del propio operador
             body = json.loads(resp.read().decode("utf-8", "replace"))
@@ -293,7 +293,7 @@ def check_clock(url: str = CLOCK_URL, timeout: float = 8.0) -> list[tuple[str, s
     before = datetime.now(UTC)
     try:
         try:
-            resp = urllib.request.urlopen(req, timeout=timeout)
+            resp = urllib.request.urlopen(req, timeout=timeout)  # nosec B310
             headers = resp.headers
         except urllib.error.HTTPError as exc:  # un 404/405 tambien trae Date
             headers = exc.headers

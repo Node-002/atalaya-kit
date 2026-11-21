@@ -113,3 +113,9 @@ jobs:
 
       - name: Probar el kit (datos falsos generados aqui; ver .github/scripts/check-kit.sh)
         run: .github/scripts/check-kit.sh
+
+      - name: Probar el asistente de instalacion (datos falsos generados aqui; ver .github/scripts/check-instalador.sh)
+        run: .github/scripts/check-instalador.sh
+
+      - name: Revisar los scripts del kit (shellcheck viene preinstalado en ubuntu-latest)
+        run: shellcheck -S warning tools/kit/instalar.sh .github/scripts/check-instalador.sh
