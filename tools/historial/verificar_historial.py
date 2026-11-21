@@ -15,13 +15,13 @@ Sale con codigo 1 si alguna comprobacion falla.
 import argparse
 import difflib
 import re
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
 
 def git(repo, *args, check=True):
-    r = subprocess.run(["git", "-C", str(repo), *args], check=False, capture_output=True)
+    r = subprocess.run(["git", "-C", str(repo), *args], check=False, capture_output=True)  # nosec B603 B607
     if check and r.returncode not in (0, 1):
         sys.exit(f"git {' '.join(args)} fallo en {repo}: {r.stderr.decode(errors='replace')[:300]}")
     return r.stdout
@@ -82,7 +82,7 @@ def main():
     args = ["grep", "-P", "-I", "-l"]
     for p in pats:
         args += ["-e", p]
-    r = subprocess.run(
+    r = subprocess.run(  # nosec B603 B607
         ["git", "-C", str(new), *args, *new_commits], check=False, capture_output=True
     )
     hits = [x for x in r.stdout.decode(errors="replace").splitlines() if x]
@@ -177,7 +177,7 @@ def main():
         return t
 
     def blob(repo, sha):
-        return subprocess.run(["git", "-C", str(repo), "cat-file", "blob", sha], check=False, capture_output=True).stdout
+        return subprocess.run(["git", "-C", str(repo), "cat-file", "blob", sha], check=False, capture_output=True).stdout  # nosec B603 B607
 
     pair_cache = {}
     commits_with_changes = 0
