@@ -33,7 +33,7 @@
 ## A. Claridad del problema (30 %) — la que más pesa
 
 **Primero (viernes, desde ya):**
-1. Escribir a quienes no han respondido (una consultora de TI, una universidad privada) y llamar a una universidad pública (soporte MFA) en horas de oficina. Meta: **al menos 3 conversaciones**, aunque sean de 10 minutos con conocidos que tengan un negocio pequeño.
+1. Escribir a quienes no han respondido (la consultora de TI y la universidad privada) y llamar al área de TI de la universidad pública en horas de oficina. Meta: **al menos 3 conversaciones**, aunque sean de 10 minutos con conocidos que tengan un negocio pequeño.
 2. Usar `docs/HOJA_ENTREVISTA.md`. Anotar solo lo esencial, sin datos personales de nadie.
 
 **Después (sábado):**

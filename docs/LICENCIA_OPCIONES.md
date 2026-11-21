@@ -30,3 +30,13 @@
 1. Elegir una opción y confirmar la respuesta de Dojo sobre licencia (#11).
 2. Añadir `LICENSE` en la raíz con el texto oficial (de choosealicense.com o spdx.org) y tu nombre y año.
 3. Mencionarla en el `README.md` y comprobar que las licencias de las dependencias son compatibles.
+
+
+---
+
+## Decisión (21 nov 2026)
+Se eligió **AGPL-3.0**. Motivos de la persona dueña del proyecto: el producto se publica automáticamente en el Marketplace del Dojo y quiere poder venderlo (por ejemplo, vender una licencia comercial a quien lo quiera usar en un producto cerrado) sin que otra persona lo copie y lo ofrezca como servicio cerrado. Notas:
+- Es **AGPL**, no la GPL común: la GPL no cubre el uso como servicio en red; la AGPL sí.
+- Una licencia **no impide** que alguien copie el código; da el **derecho legal** de reclamar si lo hace incumpliendo la licencia. Hay que notarlo y actuar.
+- Siendo titular único de los derechos, el equipo puede ofrecer el código a la vez bajo AGPL y bajo una licencia comercial distinta (doble licencia).
+- Pendiente: la pregunta a los organizadores «¿qué licencia le doy a Dojo sobre mi proyecto?» (`docs/PREGUNTAS_ORGANIZADORES.md`, #11) sigue sin respuesta por escrito. No es una decisión legal asesorada por una persona abogada.

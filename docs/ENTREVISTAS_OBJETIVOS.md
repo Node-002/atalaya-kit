@@ -1,5 +1,7 @@
 # A quién entrevistar (17–19 nov) — análisis de segmentos
 
+> **Estado real (21 nov): 0 entrevistas realizadas.** Los contactos intentados no respondieron. Este documento se conserva como análisis y plantilla; no contiene datos de contacto de terceros.
+
 > Valoraciones **propias**, basadas en lo que se puede alcanzar en 48 horas, no en datos medidos. No incluyo nombres de empresas concretas porque no los verifiqué; los nombres los ponés vos desde tus contactos reales.
 
 ## Meta
@@ -19,7 +21,7 @@ Puntaje 1–5 (5 es mejor): **Alcance** = qué tan fácil es hablar con alguien 
 
 | # | Segmento | Alcance | Dolor | Compra | Valor | Por qué / a quién buscar |
 |---|---|:--:|:--:|:--:|:--:|---|
-| 1 | **Tu universidad** (TI, coordinación, docentes) | 5 | 4 | 3 | 4 | Lo más fácil de alcanzar. Muchos usuarios, phishing constante a estudiantes y docentes. Buscar al encargado de TI o a un docente que te presente. |
+| 1 | **Una universidad** (TI, coordinación, docentes) | 5 | 4 | 3 | 4 | Lo más fácil de alcanzar. Muchos usuarios, phishing constante a estudiantes y docentes. Buscar al encargado de TI o a un docente que te presente. |
 | 2 | **Pymes de conocidos** (familia, amigos, vecinos) | 5 | 3 | 4 | 4 | El dueño decide y paga. Tiendas, talleres, agencias, restaurantes con correo. Dolor real pero poca sofisticación. |
 | 3 | **Despachos contables y de abogados pequeños** | 3 | 4 | 4 | 5 | Manejan información sensible y son blanco de fraude por correo. Buscar a través de conocidos. |
 | 4 | **Persona de TI freelance o pequeña empresa de soporte** | 4 | 4 | 4 | 5 | Atienden a varias organizaciones: son un **canal de venta** posible. Alto valor para el modelo de negocio. Comunidades de TI, tu universidad, Dojo. |
@@ -32,7 +34,7 @@ Puntaje 1–5 (5 es mejor): **Alcance** = qué tan fácil es hablar con alguien 
 | 11 | Bancos y empresas grandes | 1 | 4 | 4 | 2 | Difícil de alcanzar y no son tu cliente objetivo. |
 
 ## Prioridad para estos 3 días
-1. **Tu universidad** y **pymes de conocidos**: son las más rápidas. Conseguí al menos 2.
+1. **Una universidad** y **pymes de conocidos**: son las más rápidas. Conseguí al menos 2.
 2. **Una persona de TI o proveedor de soporte**: la que más aporta al modelo de negocio (canal).
 3. **Un despacho contable, un colegio o una clínica**, si surge un contacto.
 4. Dejá cámaras, coworkings y entidades públicas para el pitch como **mercado futuro**, no como entrevistas ahora.
@@ -73,56 +75,34 @@ Puntaje 1–5 (5 es mejor): **Alcance** = qué tan fácil es hablar con alguien 
 - No citar el nombre de una persona u organización sin su permiso.
 - No incluir en el repositorio público las notas con datos de personas.
 
-## Contactos con fuente (investigados el 17 nov 2026)
-> Solo canales **institucionales o comerciales publicados por la propia organización**. No incluyo correos ni teléfonos de personas. **Antes de enviar, confirmá cada dato en el sitio oficial**: las páginas pueden cambiar.
+## Contactos intentados (investigados el 17–18 nov 2026)
+> **Estado real: 0 entrevistas realizadas.** Se intentó por correo, WhatsApp y redes sociales (Instagram) y no hubo respuesta. Aquí solo quedan descriptores genéricos: se omiten nombres, correos y teléfonos de instituciones y de personas. Los canales se tomaron de lo que cada organización publica en su propio sitio. El número exacto de intentos por canal: [completar con el dato real].
 
-| Organización | Qué es | Canales publicados | Fuente | Estado |
-|---|---|---|---|---|
-| **una consultora de TI** (Ciudad de Panamá) | Consultora de TI desde 2016: soporte, nube, seguridad de la información; trabaja con Microsoft 365 y Google Workspace; atiende bufetes, salud, comercio, construcción y auditoría | Correo [contacto omitido]; WhatsApp; teléfonos [contacto omitido] y [contacto omitido]; sin formulario | [[sitio omitido]]([sitio omitido]) | Datos leídos del sitio oficial |
-| **una autoridad pública de pymes** | Entidad del Estado: capacitación, formalización y apoyo a emprendedores | Página de contacto: [sitio omitido] redes sociales; el sitio principal no muestra correo ni teléfono. Un correo ([contacto omitido]) aparece en una fuente secundaria antigua: **sin confirmar** | [[sitio omitido]]([sitio omitido]) | Usar la página de contacto oficial |
-| **CSIRT Panamá (AIG)** | Equipo nacional de respuesta a incidentes | **No encontré un correo oficial verificado.** Una lista de terceros sugiere el dominio cert.pa (sin confirmar) | Notas de prensa | Buscar en el sitio de la AIG o en gob.pa |
-| **varios proveedores de TI** | Proveedores de TI y ciberseguridad que aparecen en directorios de socios y en prensa | **No verifiqué sus canales de contacto.** La información viene de directorios y notas de prensa | [Elioplus](https://elioplus.com/la/panama/channel-partners/google_workspace), [Telesemana](https://www.telesemana.com/blog/2025/12/02/cw-business-y-coro-lanzan-soluciones-de-ciberseguridad-para-pymes-ante-el-aumento-de-ataques-informatico/) | Buscar su sitio oficial antes de escribir |
+| Descriptor | Qué es | Canales publicados | Estado |
+|---|---|---|---|
+| **Una consultora de TI** (Ciudad de Panamá) | Consultora de TI con años de trayectoria: soporte, nube, seguridad de la información; trabaja con Microsoft 365 y Google Workspace; atiende bufetes, salud, comercio, construcción y auditoría | Correo general y WhatsApp: [contacto omitido] | Sin respuesta |
+| **Una autoridad pública de pymes** | Entidad del Estado: capacitación, formalización y apoyo a emprendedores | Página de contacto y redes sociales: [contacto omitido]. Un correo en una fuente secundaria antigua: sin confirmar | Sin intento confirmado en este registro |
+| **El equipo nacional de respuesta a incidentes** | Equipo de respuesta a incidentes del país | No se encontró un correo oficial verificado | Sin contacto |
+| **Varios proveedores de TI y ciberseguridad** | Aparecen en directorios de socios y en prensa | No se verificaron sus canales | Sin contacto |
+| **Una asociación de colegios** | Puerta de entrada a colegios privados | [contacto omitido] | Pendiente / sin respuesta |
 
 ### Cómo abordar cada uno
-- **una consultora de TI:** es el mejor candidato de esta lista. Atienden pymes con Microsoft 365 y Google Workspace, que es justo lo que necesitás saber para decidir el conector. Escribir por correo o WhatsApp pidiendo 15 minutos con quien atienda a clientes pequeños. Pedir una persona técnica, no ventas.
-- **una autoridad pública de pymes:** muy buena puerta de entrada a pequeños empresarios, pero lenta. Escribir por la página de contacto pidiendo que te conecten con un par de emprendedores o con la red de capacitadores ("Red de Trainers").
-- **CSIRT Panamá:** útil para datos oficiales del problema, no necesariamente para entrevista. Intentarlo solo con el contacto oficial confirmado.
-- **Universidad:** ver nota abajo.
+- **Consultora de TI:** el mejor candidato de la lista: atiende pymes con Microsoft 365 y Google Workspace, justo lo que hay que saber para decidir el conector. Escribir por correo o WhatsApp pidiendo 15 minutos con una persona técnica, no de ventas.
+- **Autoridad pública de pymes:** buena puerta a pequeños empresarios, pero lenta. Pedir por su página de contacto que conecten con un par de emprendedores o capacitadores.
+- **Equipo nacional de respuesta a incidentes:** útil para datos oficiales del problema, no necesariamente para entrevista.
+- **Universidades:** ver abajo.
 
-### La universidad (TIC)
-Falta el nombre de tu universidad para buscar el contacto oficial de su dirección de tecnología. Mientras tanto, el camino más rápido suele ser:
-1. Escribirle a **tu coordinador, tu profesor de ciberseguridad o de redes**, y pedirle que te presente con la persona de TI. Suele responder más rápido que un correo a un área.
-2. Si no, usar el **canal oficial de soporte de TI o de informática** que figura en la página de la universidad (correo de mesa de ayuda o formulario), y mencionar que es un trabajo académico.
+## Universidades (investigado el 17–18 nov 2026)
+> Canales **institucionales** publicados por cada universidad. No se incluyen contactos de personas ni de instituciones concretas.
 
-### Mensaje breve para pedir una presentación (universidad)
-> Hola [profesor/coordinador], soy [Nombre], estudiante de [carrera]. Estoy investigando cómo se manejan los correos de phishing en organizaciones pequeñas para un proyecto, y me gustaría conversar 15 minutos con la persona encargada de TI o de la seguridad del correo de la universidad. ¿Podrías presentarme o indicarme a quién escribir? Si pudiera ser este miércoles o jueves, te lo agradezco mucho.
+### Una universidad pública, área de TI
+- Tiene una dirección de tecnologías de la información y un departamento de soporte de correo, según informes institucionales. No se encontró su correo directo: [contacto omitido].
+- **Pista útil (sin confirmar):** una guía oficial de soporte indica que sus cuentas de correo son de **Microsoft 365**. Es un dato del lado de Microsoft para el conector (ver `docs/MVP_ALCANCE.md`). Es **un solo dato**; lo deben confirmar las entrevistas.
+- **Camino recomendado:** pedir a un profesor o coordinador conocido que presente con el área de TI. Las colas de soporte de autenticación son para usuarios con cuenta: no usarlas para pedir entrevistas. Lo razonable es una llamada a la línea oficial para preguntar a quién dirigir una consulta de 15 minutos.
 
-## Universidades (investigado el 17 nov 2026)
-> Canales **institucionales** publicados por cada universidad. No incluyo contactos de personas. Confirmá cada dato en el sitio oficial antes de escribir.
+### Una universidad privada, área de tecnología
+- Tiene una dirección de tecnología (red, equipos, ciberseguridad, nube, soporte técnico). Correo del área, teléfono y WhatsApp institucional: [contacto omitido]. La página no dice si el correo publicado es el del área o el general: **confirmar**.
+- Su sistema de tickets es para estudiantes y graduados: no es el canal para pedir una entrevista. Preferir correo o teléfono al área de tecnología.
 
-### una universidad pública (una universidad pública)
-- **Área de TI:** la Dirección de Tecnologías de la Información y Comunicaciones (el área de TI) existe y tiene un **Departamento de Soporte de Correo**, según informes institucionales de la una universidad pública (no encontré su correo ni su teléfono directo).
-- **Canales generales del sitio ([[sitio omitido]]([sitio omitido])):** teléfono [contacto omitido]; página **Contáctenos** ([sitio omitido]); **Directorio Telefónico** ([sitio omitido]); Centro de Atención Ciudadana 311. El buzón ([sitio omitido]) es para consultas, quejas y sugerencias, **no** es un canal de TI.
-- **Pista útil (sin confirmar):** los informes mencionan consultas de estudiantes sobre OneDrive de su correo institucional, lo que sugiere que la una universidad pública usa **Microsoft 365**. Preguntarlo en la entrevista; puede decidir el conector prioritario.
-- **Camino recomendado:** escribirle a un **profesor o coordinador** de tu facultad (ciberseguridad, redes o sistemas) pidiendo que te presente con el área de TI. Alternativa: buscar el área de TI en el Directorio Telefónico.
-
-### una universidad privada
-- **Dirección de Tecnología** (red, equipos, ciberseguridad, nube, soporte técnico): [[sitio omitido]]([sitio omitido]).
-  - Correo que aparece en su bloque de contacto: `[contacto omitido]` (la página no dice si es la dirección general del área; **confirmar**).
-  - Teléfono (Panamá): [contacto omitido]. WhatsApp institucional: (+507) 6000-0000.
-  - Dirección: Edificio Fundadores, Av. Simón Bolívar, Bella Vista, Ciudad de Panamá.
-- **Sistema de tickets (CASU):** [[sitio omitido]]([sitio omitido]) es para **estudiantes, graduados y otros interesados** (solicitudes, quejas, sugerencias). No es el canal adecuado para pedir una entrevista, y para usarlo hay que registrarse. Preferir correo o teléfono al área de Tecnología.
-
-### Mensaje para una universidad privada (como persona externa)
-> Estimados señores de la Dirección de Tecnología de una universidad privada: soy [Nombre], participante de un hackatón de ciberseguridad. Estoy realizando una investigación académica sobre cómo las instituciones educativas manejan el phishing en el correo institucional y me gustaría conversar 15 minutos con la persona encargada de seguridad o de la plataforma de correo, el miércoles 18 o el jueves 19. No es una venta y no necesito ningún dato interno ni acceso. Si prefieren, puedo enviar mis preguntas por escrito. Agradezco su tiempo.
-
-### Mensaje para la una universidad pública (a tu profesor o coordinador)
-> Hola profesor/a [Apellido], soy [Nombre], estudiante de [carrera]. Estoy haciendo una investigación sobre cómo se maneja el phishing en el correo institucional de organizaciones educativas. ¿Podría presentarme con la persona de el área de TI encargada del correo o de la seguridad? Serían 15 minutos, el miércoles o el jueves, y no necesito ningún dato interno. Muchas gracias.
-
-> **Corrección (18 nov):** los mensajes de esta sección hablan de "investigación académica" o "trabajo académico". Como se trata de un proyecto de hackathon, **usá los textos corregidos de `docs/CORREOS_ENTREVISTAS.md`**.
-
-### Actualización una universidad pública (18 nov): contactos de soporte
-- **Verificado en un documento oficial de el área de TI** ([guía de activación de MFA para Microsoft 365]([sitio omitido])): `[contacto omitido]`, con teléfonos [contacto omitido] y [contacto omitido]. Es un canal de **soporte de autenticación**, no de entrevistas.
-- **Sin verificar** (aparecen en un resumen de IA del buscador, no en ninguna fuente oficial que encontré): `[contacto omitido]` y `[contacto omitido]`. Los informes de la una universidad pública mencionan un "Soporte de Correo" de el área de TI, pero sin esa dirección. El portal `[sitio omitido]` no respondió al intentar abrirlo.
-- **Hallazgo:** la guía de MFA indica que las cuentas de la una universidad pública son de **Microsoft 365**. Es un dato del lado de Microsoft para el conector (ver `docs/MVP_ALCANCE.md`).
-- **Cómo usarlo:** son colas de soporte para usuarios con cuenta. No las uses para pedir entrevistas masivamente. Lo razonable es **una llamada** a los teléfonos oficiales para preguntar a quién dirigir una consulta de 15 minutos.
+### Mensajes
+Las plantillas listas para usar están en `docs/CORREOS_ENTREVISTAS.md` (sin datos de contacto de nadie). Los textos deben presentar el trabajo con transparencia: una investigación para un proyecto de ciberseguridad que se presenta en un hackatón.
