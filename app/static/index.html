@@ -14,6 +14,7 @@
     <div class="top-actions">
       <div id="coverage" class="coverage" role="status" aria-live="polite">Comprobando cobertura…</div>
       <span id="yo" class="muted" hidden></span>
+      <button id="btn-rol" type="button" class="btn btn-ghost" hidden></button>
       <button id="btn-invitar" type="button" class="btn btn-primary">Invitar buzón</button>
       <button id="btn-salir" type="button" class="btn btn-ghost" hidden>Salir</button>
     </div>
@@ -22,6 +23,11 @@
   <div id="banner" class="demo-banner" role="note">
     <strong>Demostración con datos simulados.</strong>
     No conectes tu correo real: aquí todo es ficticio y no se guarda nada.
+  </div>
+
+  <div id="banner-rol" class="rol-banner" role="note" hidden>
+    <strong>Vista de supervisión (solo lectura).</strong>
+    Puedes ver el panel, el historial y los informes, pero no aprobar, rechazar, desconectar ni invitar.
   </div>
 
   <section id="seguridad" class="seguridad" aria-labelledby="titulo-seguridad" hidden>
@@ -75,6 +81,10 @@
     <section id="panel-historial" class="panel historial" role="tabpanel" aria-labelledby="tab-historial" tabindex="-1" hidden>
       <h2 id="titulo-historial">Historial de actividad</h2>
       <p class="nota">Qué se hizo, quién y cuándo: accesos, invitaciones, buzones y decisiones sobre correos.</p>
+      <div class="fila reporte">
+        <a id="rep-ver" class="btn" href="/api/org-report" target="_blank" rel="noopener">Ver reporte de la organización</a>
+        <a id="rep-bajar" class="btn btn-ghost" href="/api/org-report?download=true" download>Descargar reporte</a>
+      </div>
       <ul id="historial" class="lista-historial"></ul>
     </section>
   </main>

@@ -11,6 +11,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
@@ -35,7 +36,7 @@ from app.models import Alert, Coverage, Status
 from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider, demo_workforce
 from app.registry import Registry
-from app.report import build_report
+from app.report import build_org_report, build_report
 from app.store import AlertStore, ReasonRequired
 
 load_dotenv()
@@ -44,10 +45,15 @@ POLL_SECONDS = int(os.environ.get("ATALAYA_POLL_SECONDS", "60"))
 
 STATIC_DIR = Path(__file__).parent / "static"
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+DEMO_ROLE_COOKIE = "atalaya_demo_role"
 
 
 class DecisionIn(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
+
+
+class DemoRoleIn(BaseModel):
+    role: Literal["admin", "supervisor"]
 
 
 class InviteIn(BaseModel):
@@ -67,6 +73,10 @@ def _build_admin(registry: Registry, base_url: str) -> AdminAuth:
         emails = parse_email_list(os.environ.get("ATALAYA_ADMIN_EMAILS", ""))
     except ValueError as exc:
         raise RuntimeError(f"ATALAYA_ADMIN_EMAILS: {exc}") from exc
+    try:
+        supervisors = parse_email_list(os.environ.get("ATALAYA_SUPERVISOR_EMAILS", ""))
+    except ValueError as exc:
+        raise RuntimeError(f"ATALAYA_SUPERVISOR_EMAILS: {exc}") from exc
     smtp = None
     if os.environ.get("ATALAYA_SMTP_HOST"):
         smtp = SmtpConfig(
@@ -87,6 +97,7 @@ def _build_admin(registry: Registry, base_url: str) -> AdminAuth:
         registry,
         password=os.environ.get("ATALAYA_ADMIN_PASSWORD") or None,
         emails=emails,
+        supervisors=supervisors,
         domain=os.environ.get("ATALAYA_ADMIN_DOMAIN") or None,
         secure_cookie=base_url.startswith("https"),
         notifier=notifier,
@@ -178,6 +189,14 @@ def create_app(
 
     app = FastAPI(title="Atalaya", version="0.2.0", lifespan=lifespan)
 
+    def role_of(request: Request) -> str:
+        """admin o supervisor. En la demo (sin cuentas) se elige con una cookie."""
+        if admin:
+            return admin.role(request) or "admin"
+        if mode == "demo" and request.cookies.get(DEMO_ROLE_COOKIE) == "supervisor":
+            return "supervisor"
+        return "admin"
+
     @app.middleware("http")
     async def security(request: Request, call_next):
         path = request.url.path
@@ -196,6 +215,16 @@ def create_app(
             and not admin.is_admin(request)
         ):
             return JSONResponse({"detail": "Inicia sesion."}, status_code=401)
+        # El supervisor solo lee: se hace cumplir aqui, no solo ocultando botones.
+        if (
+            request.method in WRITE_METHODS
+            and path.startswith("/api/")
+            and path != "/api/demo/role"
+            and role_of(request) == "supervisor"
+        ):
+            return JSONResponse(
+                {"detail": "Tu rol es de solo lectura."}, status_code=403
+            )
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
@@ -399,6 +428,31 @@ def create_app(
                 status_code=409, detail="La invitacion ya no se puede revocar."
             )
         return {"status": "revoked"}
+
+    @app.get("/api/whoami")
+    def whoami(request: Request) -> dict:
+        return {"role": role_of(request), "demo_roles": admin is None and mode == "demo"}
+
+    @app.post("/api/demo/role")
+    def demo_role(body: DemoRoleIn) -> JSONResponse:
+        """Solo demo: alterna entre administracion y supervisor para ensenar la vista de solo lectura."""
+        if admin is not None or mode != "demo":
+            raise HTTPException(status_code=404, detail="Solo disponible en modo demo.")
+        response = JSONResponse({"role": body.role})
+        response.set_cookie(
+            DEMO_ROLE_COOKIE, body.role, httponly=True, samesite="lax", max_age=3600
+        )
+        return response
+
+    @app.get("/api/org-report")
+    def org_report(download: bool = False) -> PlainTextResponse:
+        disposition = "attachment" if download else "inline"
+        return PlainTextResponse(
+            build_org_report(org_name, store.list(), registry.list_audit(200)),
+            headers={
+                "Content-Disposition": f'{disposition}; filename="reporte-organizacion.md"'
+            },
+        )
 
     @app.get("/api/audit")
     def audit() -> list[dict]:

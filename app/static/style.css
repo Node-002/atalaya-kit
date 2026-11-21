@@ -156,3 +156,7 @@ details.tecnico > summary:focus-visible { outline: 3px solid var(--accent); outl
 .campana { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 16px; margin: 10px 0; border: 1px solid var(--line); border-left: 6px solid var(--high); border-radius: 8px; background: var(--panel); }
 .campana.medium { border-left-color: var(--medium); }
 .campana .info { flex: 1 1 260px; word-break: break-word; }
+
+/* --- Supervisor y reporte --- */
+.rol-banner { background: #2b2438; border-bottom: 1px solid #4b3f6b; padding: 10px 20px; font-size: .95rem; }
+.reporte { margin: 8px 0 14px; flex-wrap: wrap; }

@@ -53,6 +53,7 @@ const buzonesEl = document.getElementById("buzones");
 let mode = "demo";
 let authRequired = false;
 let multiple = false;
+let readOnly = false; // rol de supervisor: el servidor tambien lo hace cumplir (403)
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -157,18 +158,18 @@ function renderAlert(alert) {
   }
 
   const actions = el("div", "actions");
-  if (alert.status !== "quarantined") {
+  if (!readOnly && alert.status !== "quarantined") {
     const needs = alert.quarantine_needs_reason;
     actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () =>
       act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.",
         needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null)));
   }
-  if (alert.status === "pending_approval") {
+  if (!readOnly && alert.status === "pending_approval") {
     actions.appendChild(button("Dejarlo donde está", "btn", () =>
       act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.",
         { title: "Dejarlo donde está", help: "Atalaya lo marcó como riesgo alto y vas a dejarlo en la bandeja. Explica por qué: queda en el informe del correo." })));
   }
-  if (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed")) {
+  if (!readOnly && (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed"))) {
     const restoring = alert.status === "quarantined";
     actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-primary", () =>
       act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.",
@@ -274,7 +275,7 @@ function renderCoverage(coverage) {
     info.appendChild(el("span", "muted", " · " + c.account));
     li.appendChild(info);
     li.appendChild(el("span", "badge " + (ok ? "low" : "high"), ok ? "Vigilado" : "Sin cobertura"));
-    li.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
+    if (!readOnly) li.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
     buzonesEl.appendChild(li);
   });
   if (!coverage.length) buzonesEl.appendChild(el("li", "muted", "Todavía no hay buzones. Usa «Invitar buzón»."));
@@ -388,7 +389,7 @@ function renderCampaigns() {
     card.appendChild(info);
     const n = c.actionable;
     const label = n === c.mailbox_count ? "Poner en cuarentena en los " + n + " buzones" : "Poner en cuarentena los " + n + " restantes";
-    card.appendChild(button(label, c.pending ? "btn btn-danger" : "btn", () =>
+    if (!readOnly) card.appendChild(button(label, c.pending ? "btn btn-danger" : "btn", () =>
       actCampaign(c, "Cuarentena aplicada a " + n + " correos de la campaña. Nada se borró: puedes sacarlos de cuarentena uno por uno.")));
     box.appendChild(card);
   });
@@ -672,6 +673,21 @@ async function init() {
       yo.textContent = "Sesión: " + me.id;
       yo.hidden = false;
     }).catch(() => {});
+  }
+  const who = await api("/api/whoami").catch(() => ({ role: "admin", demo_roles: false }));
+  readOnly = who.role === "supervisor";
+  if (readOnly) {
+    document.getElementById("banner-rol").hidden = false;
+    ["btn-invitar", "reset"].forEach((id) => { document.getElementById(id).hidden = true; });
+  }
+  if (who.demo_roles) {
+    const toggle = document.getElementById("btn-rol");
+    toggle.hidden = false;
+    toggle.textContent = readOnly ? "Volver a administración" : "Ver como supervisor";
+    toggle.addEventListener("click", async () => {
+      await api("/api/demo/role", "POST", { role: readOnly ? "admin" : "supervisor" });
+      window.location.reload();
+    });
   }
   await load();
 }
