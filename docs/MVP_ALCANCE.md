@@ -103,3 +103,6 @@ Decidido por la persona autora. En una empresa, quien usa Atalaya (administraci�
 
 ### Dato nuevo (18 nov): la una universidad pública usa Microsoft 365
 Una guía oficial de el área de TI explica cómo activar la autenticación multifactor en las cuentas de **Microsoft 365** de la una universidad pública. Es un indicio fuerte de que al menos una universidad grande de Panamá usa Microsoft. Es **un solo dato**: lo deciden las entrevistas (una consultora de TI y una universidad privada). Si la mayoría confirma Microsoft 365, el conector prioritario pasa a ser Microsoft, y el viernes por la mañana hay que preparar el registro de la aplicación en Entra, no solo Google Cloud.
+
+## Ampliaciones autorizadas (20 nov 2026)
+Con **permiso explícito de la persona dueña del proyecto** el 20 nov 2026 entraron dos piezas que no estaban en "Entra": **campañas** (agrupar el mismo ataque en varios buzones y aislarlo con una sola acción reversible) y un **rol de supervisor de solo lectura** con reporte de la organización. Ver `docs/adr/0004-panel-de-organizacion-campanas-y-supervisor.md`.

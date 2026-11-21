@@ -3,6 +3,7 @@
 No incluye el contenido del correo ni sus adjuntos (Atalaya no los guarda).
 """
 
+from collections import Counter
 from datetime import UTC, datetime
 
 from app.models import HUMAN_ACTIONS, Alert, Status
@@ -87,4 +88,67 @@ def build_report(alert: Alert) -> str:
         f"Informe generado el {_when(datetime.now(UTC))}. No incluye el contenido del correo ni sus adjuntos.",
         "",
     ]
+    return "\n".join(lines)
+
+
+AUDIT_TEXT = {
+    "admin_login": "Inicio de sesion",
+    "admin_login_failed": "Intento de acceso fallido",
+    "admin_login_denied": "Cuenta no autorizada intento entrar",
+    "admin_login_blocked": "Acceso bloqueado por demasiados intentos",
+    "invite_created": "Creo una invitacion",
+    "invite_revoked": "Revoco una invitacion",
+    "mailbox_connected": "Se conecto un buzon",
+    "mailbox_reconnected": "Se reconecto un buzon",
+    "mailbox_disconnected": "Se desconecto un buzon",
+    "mailbox_rejected_identity": "Se rechazo una cuenta con caracteres sospechosos",
+    "alert_quarantine": "Puso un correo en cuarentena",
+    "alert_kept": "Decidio no aislar un correo",
+    "alert_legit": "Saco un correo de cuarentena o lo marco como legitimo",
+}
+
+
+def build_org_report(org_name: str, alerts: list[Alert], audit: list[dict]) -> str:
+    """Reporte de la organizacion para la supervision: que se hizo, quien decidio y cuando.
+    Solo veredictos, decisiones y motivos; nunca el contenido de los correos."""
+    decisions = sorted(
+        (
+            (action.at, action.by, alert, action)
+            for alert in alerts
+            for action in alert.actions
+            if action.type in HUMAN_ACTIONS
+        ),
+        key=lambda row: row[0],
+        reverse=True,
+    )
+    risks = Counter(alert.risk.value for alert in alerts)
+    states = Counter(_final_state(alert) for alert in alerts)
+    lines = [
+        f"# Reporte de la organizacion: {org_name}",
+        "",
+        f"Generado el {_when(datetime.now(UTC))}. No incluye el contenido de los correos.",
+        "",
+        "## 1. Resumen",
+        "",
+        f"- Correos analizados: {len(alerts)}",
+        f"- Por riesgo: alto {risks['high']}, medio {risks['medium']}, bajo {risks['low']}",
+    ]
+    lines += [f"- {state}: {n}" for state, n in sorted(states.items())]
+    lines += ["", "## 2. Decisiones de las personas (mas recientes primero)", ""]
+    if not decisions:
+        lines.append("Todavia no hay decisiones humanas.")
+    for at, by, alert, action in decisions:
+        reason = _one_line(action.reason) if action.reason else "(sin motivo escrito)"
+        lines.append(
+            f"- {_when(at)} - {by} - {alert.mailbox_label or 'buzon'} / "
+            f"{alert.sender_domain}: {DECISION_TEXT.get(action.type, action.type)}. Motivo: {reason}"
+        )
+    lines += ["", "## 3. Actividad registrada", ""]
+    if not audit:
+        lines.append("Sin actividad registrada.")
+    for event in audit:
+        text = AUDIT_TEXT.get(event["action"], event["action"])
+        detail = f" ({_one_line(event['detail'])})" if event.get("detail") else ""
+        lines.append(f"- {event['at']} - {event['actor']} - {text}{detail}")
+    lines.append("")
     return "\n".join(lines)

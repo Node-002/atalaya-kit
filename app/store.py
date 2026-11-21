@@ -9,7 +9,7 @@ import threading
 from datetime import UTC, datetime
 from typing import Protocol
 
-from app import analyzers, decision
+from app import analyzers, campaigns, decision
 from app.llm import Explainer, LLMVerdict, semantic_signals
 from app.models import ActionRecord, Alert, Message, Risk, Signal, Status
 from app.providers.base import MailProvider
@@ -77,6 +77,7 @@ class AlertStore:
         self._verdicts: dict[
             tuple[str, str], LLMVerdict | None
         ] = {}  # cache: una llamada por correo
+        self._last_poll: dict[str, datetime] = {}
         self._lock = threading.RLock()
         if provider is not None:
             self.add_provider(DEFAULT_MAILBOX, "", provider)
@@ -89,6 +90,7 @@ class AlertStore:
     def remove_provider(self, mailbox_id: str) -> None:
         with self._lock:
             self._providers.pop(mailbox_id, None)
+            self._last_poll.pop(mailbox_id, None)
             for alert_id in [a for a, (m, _) in self._refs.items() if m == mailbox_id]:
                 self._alerts.pop(alert_id, None)
                 self._refs.pop(alert_id, None)
@@ -102,6 +104,9 @@ class AlertStore:
             return [
                 (mid, label, prov) for mid, (label, prov) in self._providers.items()
             ]
+
+    def last_check(self, mailbox_id: str) -> datetime | None:
+        return self._last_poll.get(mailbox_id)
 
     def has_provider(self, mailbox_id: str) -> bool:
         return mailbox_id in self._providers
@@ -156,6 +161,7 @@ class AlertStore:
             for mailbox_id, (label, provider) in list(self._providers.items()):
                 try:
                     self._poll_one(mailbox_id, label, provider)
+                    self._last_poll[mailbox_id] = _now()
                 except Exception:
                     log.exception("Fallo la consulta del buzon %s", mailbox_id)
 
@@ -181,13 +187,17 @@ class AlertStore:
                 actions.append(
                     ActionRecord(type=f"label:{label.value}", at=_now(), by="atalaya")
                 )
+            domain = analyzers.domain_of(msg.sender)
+            sender_key, topic_key = campaigns.fingerprints(msg.sender, msg.subject, domain)
             self._alerts[alert_id] = Alert(
                 id=alert_id,
                 message_ref=alert_id,
                 mailbox_id=mailbox_id,
                 mailbox_label=label_text,
                 received_at=msg.received_at,
-                sender_domain=analyzers.domain_of(msg.sender),
+                sender_domain=domain,
+                sender_key=sender_key,
+                topic_key=topic_key,
                 risk=risk,
                 signals=signals,
                 explanation=verdict.explanation
@@ -234,6 +244,24 @@ class AlertStore:
             self._record(alert, "quarantine", by, reason)
             self._persist(alert_id)
             return alert
+
+    def approve_many(
+        self, alert_ids: "list[str]", by: str, reason: str | None = None
+    ) -> "tuple[list[Alert], int]":
+        """Cuarentena de varias alertas con la MISMA regla que la individual: si alguna exige
+        motivo y no hay, no se toca ninguna. Devuelve (aisladas, fallidas)."""
+        with self._lock:
+            targets = [self._alerts[i] for i in alert_ids]
+            for alert in targets:
+                _clean_reason(reason, alert.quarantine_needs_reason)
+            done, failed = [], 0
+            for alert in targets:
+                try:
+                    done.append(self.approve(alert.id, by, reason))
+                except Exception:
+                    log.exception("Fallo la cuarentena de una alerta de la campana")
+                    failed += 1
+            return done, failed
 
     def reject(self, alert_id: str, by: str, reason: str | None = None) -> Alert:
         with self._lock:

@@ -78,6 +78,9 @@ class Alert(BaseModel):
     explanation_source: Literal["rules", "ai", "simulated"] = "rules"
     status: Status
     actions: list[ActionRecord] = Field(default_factory=list)
+    # Huellas (hash) para agrupar campanas entre buzones; nunca el remitente ni el asunto.
+    sender_key: str = ""
+    topic_key: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -116,3 +119,4 @@ class Coverage(BaseModel):
     label: str = ""
     account: str
     status: ConnectionStatus
+    last_check: datetime | None = None  # ultima vez que Atalaya reviso este buzon
