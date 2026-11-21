@@ -37,3 +37,8 @@ Thumbs.db
 
 # Registros de despliegue y logs locales
 *.log
+
+# Herramientas locales de Claude Code (worktrees, ajustes y memoria personales)
+.claude/worktrees/
+.claude/settings.local.json
+.claude/memory/
