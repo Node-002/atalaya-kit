@@ -57,6 +57,9 @@ class DemoRoleIn(BaseModel):
     role: Literal["admin", "supervisor"]
 
 
+DEMO_MAX_INVITES = 50
+
+
 class InviteIn(BaseModel):
     label: str = Field(min_length=1, max_length=80)
 
@@ -437,6 +440,13 @@ def create_app(
     # --- Invitaciones (solo administracion) --------------------------------------------------
     @app.post("/api/invites")
     def create_invite(body: InviteIn, request: Request) -> dict:
+        if mode == "demo" and not legacy:  # tope por copia: la memoria de la demo es finita
+            total = registry.db.query("SELECT COUNT(*) AS n FROM invites")[0]["n"]
+            if total >= DEMO_MAX_INVITES:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"La demo admite hasta {DEMO_MAX_INVITES} invitaciones; reinicia la demo.",
+                )
         try:
             invite_id, token = registry.create_invite(body.label, actor_of(request))
         except ValueError as exc:
@@ -501,6 +511,9 @@ def create_app(
             else:  # buzones agregados por invitacion en esta demo
                 registry.delete_mailbox(mailbox_id, actor_of(request))
                 store.remove_provider(mailbox_id)
+        if not legacy:  # tambien las invitaciones y el registro de esta copia (memoria acotada)
+            registry.db.execute("DELETE FROM invites")
+            registry.db.execute("DELETE FROM audit")
         store.clear()
         store.poll()
         return {"status": "reset"}

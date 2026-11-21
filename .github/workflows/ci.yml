@@ -12,6 +12,7 @@ jobs:
   pruebas:
     name: Pruebas, estilo y seguridad
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # un trabajo colgado no gasta minutos sin limite
     steps:
       - uses: actions/checkout@v4
         with:
