@@ -40,3 +40,5 @@ Se eligió **AGPL-3.0**. Motivos de la persona dueña del proyecto: el producto 
 - Una licencia **no impide** que alguien copie el código; da el **derecho legal** de reclamar si lo hace incumpliendo la licencia. Hay que notarlo y actuar.
 - Siendo titular único de los derechos, el equipo puede ofrecer el código a la vez bajo AGPL y bajo una licencia comercial distinta (doble licencia).
 - Pendiente: la pregunta a los organizadores «¿qué licencia le doy a Dojo sobre mi proyecto?» (`docs/PREGUNTAS_ORGANIZADORES.md`, #11) sigue sin respuesta por escrito. No es una decisión legal asesorada por una persona abogada.
+
+- Borrador del contrato de licencia comercial para el kit autoalojado (para revisión por una persona abogada): [CONTRATO_LICENCIA_COMERCIAL_BORRADOR.md](CONTRATO_LICENCIA_COMERCIAL_BORRADOR.md).
