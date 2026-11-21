@@ -115,6 +115,7 @@ AUDIT_TEXT = {
     "mailbox_connected": "Se conecto un buzon",
     "mailbox_reconnected": "Se reconecto un buzon",
     "mailbox_disconnected": "Se desconecto un buzon",
+    "mailbox_department_changed": "Cambio el area de un buzon",
     "mailbox_rejected_identity": "Se rechazo una cuenta con caracteres sospechosos",
     "alert_quarantine": "Puso un correo en cuarentena",
     "alert_kept": "Decidio no aislar un correo",
@@ -154,7 +155,7 @@ def build_org_report(org_name: str, alerts: list[Alert], audit: list[dict]) -> s
     for at, by, alert, action in decisions:
         reason = _one_line(action.reason) if action.reason else "(sin motivo escrito)"
         lines.append(
-            f"- {_when(at)} - {by} - {alert.mailbox_label or 'buzon'} / "
+            f"- {_when(at)} - {by} - {alert.department} - {alert.mailbox_label or 'buzon'} / "
             f"{alert.sender_domain}: {DECISION_TEXT.get(action.type, action.type)}. Motivo: {reason}"
         )
     lines += ["", "## 3. Actividad registrada", ""]

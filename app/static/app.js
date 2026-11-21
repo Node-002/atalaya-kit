@@ -58,7 +58,8 @@ let subTab = "forense";
 let currentView = "panel";
 let myName = "";
 const PAGE = 24;
-const ui = { filter: "all", query: "", limit: 40, listaLimit: PAGE, historyLimit: 40, buzonFilter: "all", buzonQuery: "", rango: "24h", analiticaLimit: PAGE };
+const AREAS = ["Gerencia/Dirección", "Finanzas", "Recursos Humanos", "Ventas y Compras", "Operaciones y Logística", "IT y Sistemas", "Sin área"];
+const ui = { area: "", filter: "all", query: "", limit: 40, listaLimit: PAGE, historyLimit: 40, buzonFilter: "all", buzonQuery: "", rango: "7d", analiticaLimit: PAGE };
 const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const matches = (c, q) => !q || norm(c.label + " " + c.account).includes(norm(q));
 const scoreOf = (a) => a.signals.reduce((n, s) => n + s.weight, 0);
@@ -66,6 +67,7 @@ const scoreOf = (a) => a.signals.reduce((n, s) => n + s.weight, 0);
 const msgEl = document.getElementById("mensaje");
 const covEl = document.getElementById("coverage");
 const filtroEl = document.getElementById("filtro");
+const areaEl = document.getElementById("filtro-area");
 const listaEl = document.getElementById("lista-correos");
 const cuerpoEl = document.getElementById("detalle-cuerpo");
 const wide = window.matchMedia("(min-width: 1100px)");
@@ -297,7 +299,7 @@ function renderRow(a) {
   bar.appendChild(fill);
   rc.append(rf, bar);
   // empleado, remitente, vector, hora, estado
-  const emp = cell(el("span", "celda-1", a.mailbox_label || "—"), el("span", "celda-2", accountOf(a.mailbox_id)));
+  const emp = cell(el("span", "celda-1", a.mailbox_label || "—"), el("span", "celda-2", a.department + " · " + accountOf(a.mailbox_id)));
   const ip = a.ficha && a.ficha.source_ip ? "IP " + a.ficha.source_ip : "";
   const rem = cell(el("span", "celda-1", a.sender_domain || "—"), el("span", "celda-2", ip));
   const vec = el("span", "celda c-vector");
@@ -528,7 +530,7 @@ function renderDetail() {
   const l2 = el("div");
   const s2 = el("span");
   s2.append(document.createTextNode("Para: "), el("strong", "", alert.mailbox_label || accountOf(alert.mailbox_id) || "—"));
-  l2.append(s2, el("span", "det-id", formatDay(alert.received_at)));
+  l2.append(s2, el("span", "pill-neutro mono", alert.department));
   part.append(l1, l2);
   head.appendChild(part);
   top.appendChild(head);
@@ -657,10 +659,19 @@ function renderCoverage(coverage) {
   filtroEl.value = coverage.some((c) => c.mailbox_id === selected) ? selected : "";
   multiple = coverage.length > 1;
   lastCoverage = coverage;
+  const keepArea = ui.area;
+  areaEl.replaceChildren(new Option("Todas las áreas (" + coverage.length + ")", ""));
+  AREAS.forEach((d) => {
+    const n = coverage.filter((c) => c.department === d).length;
+    if (n || d !== "Sin área") areaEl.appendChild(new Option(d + " (" + n + ")", d));
+  });
+  areaEl.value = [...areaEl.options].some((o) => o.value === keepArea) ? keepArea : "";
+  ui.area = areaEl.value;
   document.getElementById("org-nombre").textContent = (mode === "demo" ? "Empresa Demo" : "Tu organización") + " · " + coverage.length + (coverage.length === 1 ? " buzón" : " buzones");
   document.getElementById("perfil-desc").textContent = coverage.length + (coverage.length === 1 ? " buzón vigilado" : " buzones vigilados");
   setBadge("n-buzones", coverage.length);
-  setBadge("n-analitica", coverage.length ? coverage.length + " buz." : 0);
+  const nAreas = new Set(coverage.map((c) => c.department).filter((d) => d !== "Sin área")).size;
+  setBadge("n-analitica", nAreas ? nAreas + (nAreas === 1 ? " área" : " áreas") : 0);
 }
 
 function setBadge(id, value) {
@@ -738,7 +749,7 @@ function renderMailboxes() {
   });
   const active = filters.find((f) => f.key === ui.buzonFilter) || filters[0];
   const shown = lastCoverage
-    .filter((c) => matches(c, ui.buzonQuery) && active.match(c))
+    .filter((c) => matches(c, ui.buzonQuery) && active.match(c) && (!ui.area || c.department === ui.area))
     .sort((a, b) => st(b).rank - st(a).rank || a.label.localeCompare(b.label, "es")); // lo urgente primero
   const page = shown.slice(0, ui.listaLimit);
   const more = document.getElementById("lista-mas");
@@ -750,6 +761,17 @@ function renderMailboxes() {
     const row = el("div", "fila-tabla");
     row.setAttribute("role", "row");
     const c1 = el("span", "celda"); c1.setAttribute("role", "cell"); c1.appendChild(el("span", "celda-1", c.label));
+    const ca = el("span", "celda"); ca.setAttribute("role", "cell");
+    if (readOnly) {
+      ca.appendChild(el("span", "celda-1", c.department));
+    } else {
+      const sel = el("select", "sel-area");
+      sel.setAttribute("aria-label", "Área de " + c.label);
+      AREAS.forEach((d) => sel.appendChild(new Option(d, d)));
+      sel.value = c.department;
+      sel.addEventListener("change", () => changeArea(c, sel));
+      ca.appendChild(sel);
+    }
     const c2 = el("span", "celda"); c2.setAttribute("role", "cell"); c2.appendChild(el("span", "celda-2", c.account));
     const c3 = el("span", "celda c-vector"); c3.setAttribute("role", "cell"); c3.appendChild(el("span", "celda-2", timeAgo(c.last_check)));
     const c4 = el("span", "celda"); c4.setAttribute("role", "cell"); c4.appendChild(el("span", "badge " + s.cls, s.text));
@@ -759,7 +781,7 @@ function renderMailboxes() {
     aud.setAttribute("aria-label", "Auditar los correos de " + c.label);
     c5.appendChild(aud);
     if (!readOnly) c5.appendChild(button("Desconectar", "btn btn-sm btn-ghost", () => disconnect(c)));
-    row.append(c1, c2, c3, c4, c5);
+    row.append(c1, ca, c2, c3, c4, c5);
     list.appendChild(row);
   });
   if (page.length) list.setAttribute("role", "rowgroup"); else list.removeAttribute("role");
@@ -771,6 +793,17 @@ function focusMailbox(id) {
   filtroEl.value = id;
   applyFilter();
   showView("panel");
+}
+
+async function changeArea(box, sel) {
+  try {
+    await api("/api/mailboxes/" + encodeURIComponent(box.mailbox_id) + "/department", "PATCH", { department: sel.value });
+    say("Área de " + box.label + ": " + sel.value + ".", "ok");
+    await load();
+  } catch (err) {
+    sel.value = box.department;
+    say(err.message, "error");
+  }
 }
 
 async function disconnect(box) {
@@ -815,6 +848,7 @@ const ACTIVITY_TEXT = {
   mailbox_connected: "Buzón conectado",
   mailbox_reconnected: "Buzón reconectado",
   mailbox_disconnected: "Buzón desconectado",
+  mailbox_department_changed: "Cambió el área de un buzón",
   mailbox_rejected_identity: "Cuenta rechazada",
   alert_quarantine: "Cuarentena ejecutada",
   alert_kept: "Se dejó sin aislar",
@@ -855,11 +889,11 @@ async function exportCsv(btn) {
   try {
     await busy(btn, async () => {
       const fresh = await api("/api/audit");
-      const rows = [["tipo", "fecha", "quien", "que_paso", "detalle", "correo_id", "dominio_remitente", "motivo"]];
-      fresh.forEach((e) => rows.push(["actividad", e.at, actorLabel(e.actor), ACTIVITY_TEXT[e.action] || e.action, e.detail || "", "", "", ""]));
+      const rows = [["tipo", "fecha", "quien", "que_paso", "detalle", "correo_id", "dominio_remitente", "motivo", "area"]];
+      fresh.forEach((e) => rows.push(["actividad", e.at, actorLabel(e.actor), ACTIVITY_TEXT[e.action] || e.action, e.detail || "", "", "", "", ""]));
       allAlerts.forEach((a) => a.actions
         .filter((x) => ACTION_TEXT[x.type])
-        .forEach((x) => rows.push(["decision", x.at, actorLabel(x.by), ACTION_TEXT[x.type], "", a.id, a.sender_domain, x.reason || ""])));
+        .forEach((x) => rows.push(["decision", x.at, actorLabel(x.by), ACTION_TEXT[x.type], "", a.id, a.sender_domain, x.reason || "", a.department])));
       const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const a = el("a");
@@ -911,6 +945,7 @@ function bucketsFor(range) {
   allAlerts.forEach((a) => {
     const t = new Date(a.received_at).getTime();
     if (t < start || t >= end) return;
+    if (ui.area && a.department !== ui.area) return;
     inRange.push(a);
     const b = buckets[Math.floor((t - start) / step)];
     b.total += 1;
@@ -921,7 +956,7 @@ function bucketsFor(range) {
 
 function renderAnalytics() {
   if (currentView !== "analitica") return;
-  const { buckets, inRange, start, end, cfg } = bucketsFor(ui.rango);
+  const { buckets, inRange, cfg } = bucketsFor(ui.rango);
   const label = { "24h": "las últimas 24 horas", "7d": "los últimos 7 días", "30d": "los últimos 30 días" }[ui.rango];
   document.getElementById("analitica-sub").textContent = "Cifras calculadas con las alertas guardadas de " + lastCoverage.length + (lastCoverage.length === 1 ? " buzón" : " buzones") + " en " + label + ".";
   document.getElementById("grafico-sub").textContent = "Distribución " + (cfg.unit === "hora" ? "por hora" : "por día") + " en " + label +
@@ -989,76 +1024,105 @@ function renderAnalytics() {
   document.getElementById("tasa-riesgo").textContent = inRange.length ? ((risky / inRange.length) * 100).toFixed(1).replace(".", ",") + " %" : "—";
   document.getElementById("n-decidir").textContent = String(allAlerts.filter((a) => a.priority === 0).length);
 
-  // Por buzon
-  const rows = lastCoverage.map((c) => {
-    const mine = inRange.filter((a) => a.mailbox_id === c.mailbox_id);
-    const count = (r) => mine.filter((a) => a.risk === r).length;
-    const high = count("high"); const medium = count("medium");
-    const low = mine.filter((a) => riskKey(a) === "low").length;
+  // Por area (no por persona: el directorio de usuarios ya es por persona)
+  const areaNames = AREAS.filter((d) => lastCoverage.some((c) => c.department === d) || inRange.some((x) => x.department === d));
+  const rows = areaNames.filter((d) => !ui.area || d === ui.area).map((d) => {
+    const mine = inRange.filter((x) => x.department === d);
+    const boxes = lastCoverage.filter((c) => c.department === d);
+    const high = mine.filter((x) => x.risk === "high").length;
+    const medium = mine.filter((x) => x.risk === "medium").length;
+    const low = mine.filter((x) => riskKey(x) === "low").length;
     const vc = new Map();
-    mine.filter((a) => a.signals.length).forEach((a) => vc.set(a.vector, (vc.get(a.vector) || 0) + 1));
-    const top = [...vc.entries()].sort((a, b) => b[1] - a[1])[0];
-    return { c, total: mine.length, high, medium, low, rate: mine.length ? (high + medium) / mine.length : 0, vector: top ? top[0] : "—" };
-  }).sort((a, b) => b.rate - a.rate || b.high - a.high || a.c.label.localeCompare(b.c.label, "es"));
-  const cards = document.getElementById("buzon-cards");
+    mine.filter((x) => x.signals.length).forEach((x) => vc.set(x.vector, (vc.get(x.vector) || 0) + 1));
+    const topVec = [...vc.entries()].sort((p, q) => q[1] - p[1])[0];
+    const byBox = new Map();
+    mine.filter((x) => x.risk !== "low").forEach((x) => byBox.set(x.mailbox_label, (byBox.get(x.mailbox_label) || 0) + 1));
+    const topBox = [...byBox.entries()].sort((p, q) => q[1] - p[1])[0];
+    return { d, boxes: boxes.length, total: mine.length, high, medium, low, rate: mine.length ? (high + medium) / mine.length : 0, vector: topVec ? topVec[0] : "—", topBox };
+  }).sort((p, q) => q.rate - p.rate || q.high - p.high || p.d.localeCompare(q.d, "es"));
+  const pct = (r) => (r * 100).toFixed(1).replace(".", ",") + " %";
+  document.getElementById("titulo-por-area-t").textContent = "Análisis detallado por área (" + rows.length + (rows.length === 1 ? " área)" : " áreas)");
+  const cards = document.getElementById("area-cards");
   cards.replaceChildren();
-  rows.filter((r) => r.rate > 0).slice(0, 3).forEach((r) => {
+  rows.forEach((r) => {
     const card = el("div", "b-card");
     const cab = el("div", "b-card-cab");
-    const nm = el("div"); nm.append(el("strong", "", r.c.label), el("div", "nota", r.total + (r.total === 1 ? " correo" : " correos")));
+    const nm = el("div");
+    nm.append(el("strong", "", r.d), el("div", "nota", r.boxes + (r.boxes === 1 ? " buzón" : " buzones") + " · " + r.total + (r.total === 1 ? " correo" : " correos")));
     const tasa = el("div", "b-tasa", "Tasa de riesgo");
-    tasa.appendChild(el("b", r.high ? "alta" : "", Math.round(r.rate * 100) + " %"));
+    tasa.appendChild(el("b", r.rate >= 0.5 ? "alta" : "", pct(r.rate)));
     cab.append(nm, tasa);
+    const bar = el("span", "barra-puntaje");
+    const f = el("span", r.rate >= 0.5 ? "alta" : "");
+    f.style.setProperty("--w", Math.round(r.rate * 100) + "%");
+    bar.appendChild(f);
     const tres = el("div", "b-tres");
     [["a", "Altas", r.high], ["m", "Medias", r.medium], ["l", "Bajas", r.low]].forEach(([k, t, n]) => {
-      const d = el("div", k, t); d.appendChild(el("b", "", String(n))); tres.appendChild(d);
+      const dd = el("div", k, t);
+      dd.appendChild(el("b", "", String(n)));
+      tres.appendChild(dd);
     });
-    const vb = el("div", "b-vector"); vb.append(el("span", "", "Vector principal"), document.createTextNode(r.vector));
-    card.append(cab, tres, vb, button("Auditar buzón", "btn btn-sm", () => focusMailbox(r.c.mailbox_id)));
+    const vb = el("div", "b-vector");
+    vb.append(el("span", "", "Vector principal"), document.createTextNode(r.vector));
+    const ub = el("div", "b-vector");
+    const uf = el("div", "b-usuario");
+    const un = el("div");
+    un.append(el("span", "", "Buzón más atacado"), document.createTextNode(r.topBox ? r.topBox[0] : "—"));
+    uf.appendChild(un);
+    if (r.topBox) uf.appendChild(el("span", "pill-neutro", r.topBox[1] + (r.topBox[1] === 1 ? " alerta" : " alertas")));
+    ub.appendChild(uf);
+    const go = button("Auditar área", "btn btn-sm", () => {
+      areaEl.value = r.d; ui.area = r.d; filtroEl.value = "";
+      applyFilter(); renderMailboxes(); showView("panel");
+    });
+    go.appendChild(icon("arrow-right"));
+    card.append(cab, bar, tres, vb, ub, go);
     cards.appendChild(card);
   });
-  const tb = document.getElementById("tabla-buzon");
+  const tb = document.getElementById("tabla-area");
   tb.replaceChildren();
-  const page = rows.slice(0, ui.analiticaLimit);
-  page.forEach((r) => {
+  rows.forEach((r) => {
     const row = el("div", "fila-tabla");
     row.setAttribute("role", "row");
     const mk = (cls, ...kids) => { const c = el("span", "celda" + cls); c.setAttribute("role", "cell"); kids.forEach((k) => c.appendChild(k)); return c; };
     const rate = el("span", "tasa-celda");
-    const bar = el("span", "barra-puntaje"); const f = el("span", r.high ? "alta" : ""); f.style.setProperty("--w", Math.round(r.rate * 100) + "%"); bar.appendChild(f);
-    rate.append(document.createTextNode(Math.round(r.rate * 100) + " %"), bar);
-    row.append(mk("", el("span", "celda-1", r.c.label)), mk(" der", el("span", "celda-2", String(r.total))), mk(" der", el("span", "celda-2 rojo", String(r.high))),
+    const bar = el("span", "barra-puntaje");
+    const f = el("span", r.rate >= 0.5 ? "alta" : "");
+    f.style.setProperty("--w", Math.round(r.rate * 100) + "%");
+    bar.appendChild(f);
+    rate.append(document.createTextNode(pct(r.rate)), bar);
+    row.append(mk("", el("span", "celda-1", r.d)), mk(" der", el("span", "celda-2", String(r.boxes))), mk(" der", el("span", "celda-2", String(r.total))), mk(" der", el("span", "celda-2 rojo", String(r.high))),
       mk(" der", el("span", "celda-2 ambar", String(r.medium))), mk(" der", el("span", "celda-2 celeste", String(r.low))), mk("", rate), mk(" c-vector", el("span", "celda-2 sans", r.vector)));
     tb.appendChild(row);
   });
-  const more = document.getElementById("tabla-buzon-mas");
-  more.hidden = rows.length <= page.length;
-  more.textContent = "Mostrar más (" + (rows.length - page.length) + ")";
-  document.getElementById("tabla-buzon-res").textContent = "Mostrando " + page.length + " de " + rows.length + " buzones";
-  if (page.length) tb.setAttribute("role", "rowgroup"); else tb.removeAttribute("role");
-  if (!rows.length) tb.appendChild(emptyState("✉", "Todavía no hay buzones", "Invita un buzón para ver su análisis."));
+  if (rows.length) tb.setAttribute("role", "rowgroup"); else tb.removeAttribute("role");
+  if (!rows.length) tb.appendChild(emptyState("✉", "Todavía no hay áreas con buzones", "Asigna un área a cada buzón en «Usuarios Conectados»."));
 }
 document.getElementById("rango").addEventListener("click", (e) => {
   const b = e.target.closest("[data-rango]");
   if (b) { ui.rango = b.dataset.rango; renderAnalytics(); }
 });
-document.getElementById("tabla-buzon-mas").addEventListener("click", () => { ui.analiticaLimit += PAGE; renderAnalytics(); });
 
 // --- Carga de datos ---------------------------------------------------------------------------
 async function load() {
   api("/api/audit").then((e) => { events = e; renderHistory(); }).catch(() => {});
   if (authRequired) loadSecurity().catch(() => {});
-  const coverage = await api("/api/coverage");
+  // Las tres consultas salen a la vez: menos viajes de ida y vuelta antes de pintar
+  const [coverage, alerts, campaigns] = await Promise.all([
+    api("/api/coverage"),
+    api("/api/alerts"),
+    api("/api/campaigns").catch(() => []),
+  ]);
   renderCoverage(coverage);
-  allAlerts = await api("/api/alerts");
-  campaignList = await api("/api/campaigns").catch(() => []);
+  allAlerts = alerts;
+  campaignList = campaigns;
   applyFilter();
   renderMailboxes();
   renderAnalytics();
 }
 
 function applyFilter() {
-  lastAlerts = filtroEl.value ? allAlerts.filter((a) => a.mailbox_id === filtroEl.value) : allAlerts;
+  lastAlerts = allAlerts.filter((a) => (!filtroEl.value || a.mailbox_id === filtroEl.value) && (!ui.area || a.department === ui.area));
   const active = document.getElementById("filtro-activo");
   const box = lastCoverage.find((c) => c.mailbox_id === filtroEl.value);
   active.hidden = !box;
@@ -1159,7 +1223,7 @@ async function loadInvites() {
     const li = el("li", "");
     const info = el("div", "");
     info.appendChild(el("strong", "", i.label));
-    info.appendChild(el("span", "muted", " · " + INVITE_TEXT[i.status] + " · vence " + formatDate(i.expires_at)));
+    info.appendChild(el("span", "muted", " · " + (i.department || "Sin área") + " · " + INVITE_TEXT[i.status] + " · vence " + formatDate(i.expires_at)));
     li.appendChild(info);
     if (i.status === "pending") {
       li.appendChild(button("Revocar", "btn btn-sm btn-ghost", async () => {
@@ -1171,6 +1235,10 @@ async function loadInvites() {
   });
   if (!invites.length) invList.appendChild(el("li", "muted", "Aún no hay invitaciones. Escribe un nombre arriba y pulsa «Crear enlace»."));
 }
+
+const invArea = document.getElementById("inv-area");
+AREAS.forEach((d) => invArea.appendChild(new Option(d, d)));
+invArea.value = "Sin área";
 
 document.getElementById("btn-invitar").addEventListener("click", async () => {
   invRes.hidden = true;
@@ -1184,7 +1252,7 @@ document.getElementById("btn-invitar").addEventListener("click", async () => {
 document.getElementById("form-invitar").addEventListener("submit", async (event) => {
   event.preventDefault();
   try {
-    const created = await api("/api/invites", "POST", { label: invLabel.value });
+    const created = await api("/api/invites", "POST", { label: invLabel.value, department: invArea.value });
     invUrl.value = created.url;
     invRes.hidden = false;
     invMsg.textContent = "Enlace creado. Cópialo y envíaselo a la persona: solo funciona una vez.";
@@ -1272,6 +1340,7 @@ document.getElementById("guia").addEventListener("keydown", (e) => {
 
 // --- Arranque ------------------------------------------------------------------------------
 filtroEl.addEventListener("change", () => { ui.limit = 40; applyFilter(); });
+areaEl.addEventListener("change", () => { ui.area = areaEl.value; ui.limit = 40; ui.listaLimit = PAGE; applyFilter(); renderMailboxes(); });
 document.getElementById("buscar-lista").addEventListener("input", (e) => { ui.buzonQuery = e.target.value.trim(); ui.listaLimit = PAGE; renderMailboxes(); });
 document.getElementById("lista-mas").addEventListener("click", () => { ui.listaLimit += PAGE; renderMailboxes(); });
 window.addEventListener("hashchange", () => showView(window.location.hash.slice(1)));
@@ -1296,7 +1365,9 @@ async function init() {
   listaEl.setAttribute("aria-busy", "true");
   for (let i = 0; i < 5; i++) { const sk = el("div", "esqueleto"); sk.setAttribute("aria-hidden", "true"); listaEl.appendChild(sk); }
   cuerpoEl.replaceChildren(detailEmpty());
-  const health = await (await fetch("/health")).json();
+  // Salud y rol se piden a la vez (la demo crea la copia del visitante con la primera respuesta)
+  const [healthRes, who0] = await Promise.all([fetch("/health"), api("/api/whoami").catch(() => null)]);
+  const health = await healthRes.json();
   mode = health.mode;
   authRequired = health.auth;
   if (mode === "gmail") {
@@ -1310,7 +1381,7 @@ async function init() {
     api("/api/me").then((me) => { myName = me.id; renderPerson(whoCache); }).catch(() => {});
   }
   api("/api/policy").then((p) => { policy = p; renderPolicy(); }).catch(() => renderPolicy());
-  const who = await api("/api/whoami").catch(() => ({ role: "admin", demo_roles: false }));
+  const who = who0 || { role: "admin", demo_roles: false };
   whoCache = who;
   readOnly = who.role === "supervisor";
   if (readOnly) {

@@ -17,6 +17,7 @@ from typing import Literal
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import (
     FileResponse,
     JSONResponse,
@@ -25,9 +26,9 @@ from fastapi.responses import (
     Response,
 )
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from app import campaigns, logsafe
+from app import campaigns, departments, logsafe
 from app.admin import AdminAuth, build_admin_router
 from app.alerts import SecurityNotifier, SmtpConfig
 from app.auth import AuthContext, build_router, revoke_google_token
@@ -63,8 +64,23 @@ class DemoRoleIn(BaseModel):
 DEMO_MAX_INVITES = 50
 
 
+def _check_department(value: str) -> str:
+    if not departments.is_valid(value):
+        raise ValueError("Area no permitida.")
+    return value
+
+
 class InviteIn(BaseModel):
     label: str = Field(min_length=1, max_length=80)
+    department: str = departments.DEFAULT
+
+    _area = field_validator("department")(_check_department)
+
+
+class DepartmentIn(BaseModel):
+    department: str
+
+    _area = field_validator("department")(_check_department)
 
 
 def _need(name: str) -> str:
@@ -157,11 +173,16 @@ def create_app(
     seed_ids: set[str] = set()
     make_provider = None
     if not legacy and mode == "demo":
-        for mailbox_id, label, prov in demo_workforce():
+        for mailbox_id, label, prov, area in demo_workforce():
             registry.add_mailbox(
-                label, prov.account_name(), "demo", consent=True, mailbox_id=mailbox_id
+                label,
+                prov.account_name(),
+                "demo",
+                consent=True,
+                mailbox_id=mailbox_id,
+                department=area,
             )
-            store.add_provider(mailbox_id, label, prov)
+            store.add_provider(mailbox_id, label, prov, area)
             seed_ids.add(mailbox_id)
     elif not legacy and mode == "gmail":
         from app.providers.gmail import GmailProvider
@@ -170,7 +191,9 @@ def create_app(
             return GmailProvider(registry.vault(mailbox_id), client_secrets)
 
         for row in registry.list_mailboxes("gmail"):
-            store.add_provider(row["id"], row["label"], make_provider(row["id"]))
+            store.add_provider(
+                row["id"], row["label"], make_provider(row["id"]), row["department"]
+            )
     store.load_persisted()
     store.poll()
 
@@ -257,6 +280,8 @@ def create_app(
         return response
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    # La API de alertas lleva la ficha tecnica de cada correo: comprimida pesa mucho menos
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
 
     # --- Paginas -------------------------------------------------------------------------
     @app.get("/", include_in_schema=False)
@@ -440,9 +465,23 @@ def create_app(
                     account=email,
                     status=status,
                     last_check=store.last_check(mailbox_id),
+                    department=rows.get(mailbox_id, {}).get(
+                        "department", store.department_of(mailbox_id)
+                    ),
                 )
             )
         return result
+
+    @app.patch("/api/mailboxes/{mailbox_id}/department")
+    def change_department(
+        mailbox_id: str, body: DepartmentIn, request: Request
+    ) -> dict[str, str]:
+        """Solo administracion (el supervisor recibe 403 en el filtro de roles)."""
+        if registry.get_mailbox(mailbox_id) is None:
+            raise HTTPException(status_code=404, detail="Buzon no encontrado.")
+        registry.set_department(mailbox_id, body.department, actor_of(request))
+        store.set_department(mailbox_id, body.department)
+        return {"department": body.department}
 
     @app.delete("/api/mailboxes/{mailbox_id}")
     def disconnect_mailbox(mailbox_id: str, request: Request) -> dict[str, str]:
@@ -468,7 +507,9 @@ def create_app(
                     detail=f"La demo admite hasta {DEMO_MAX_INVITES} invitaciones; reinicia la demo.",
                 )
         try:
-            invite_id, token = registry.create_invite(body.label, actor_of(request))
+            invite_id, token = registry.create_invite(
+                body.label, actor_of(request), department=body.department
+            )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         invite = next(i for i in registry.list_invites() if i["id"] == invite_id)

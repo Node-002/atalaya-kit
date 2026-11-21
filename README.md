@@ -35,7 +35,7 @@ Gmail ──(consulta periódica, solo bandeja de entrada, últimos 7 días)─�
    → explicación (IA o simulada; el correo es dato hostil, la salida se valida) → veredicto
    → alerta en el panel + etiqueta en Gmail → decisión humana (cuarentena reversible)
 ```
-**Privacidad:** no se guardan asunto, cuerpo ni adjuntos. Se guarda el veredicto, las señales, un identificador, el estado y una lista blanca de metadatos técnicos de cabeceras (resultado de SPF/DKIM/DMARC, IP de origen, Return-Path con la parte local enmascarada, host de los enlaces neutralizado, dominio de Reply-To y un subconjunto saneado de cabeceras SMTP; máx. 2 KB por correo, sin direcciones completas; el país no se consulta; ver ADR 0010). Los tokens de Google se cifran (Fernet).
+**Privacidad:** no se guardan asunto, cuerpo ni adjuntos. Se guarda el veredicto, las señales, un identificador, el estado, el área de la organización del buzón (la asigna la administración; ADR 0011) y una lista blanca de metadatos técnicos de cabeceras (resultado de SPF/DKIM/DMARC, IP de origen, Return-Path con la parte local enmascarada, host de los enlaces neutralizado, dominio de Reply-To y un subconjunto saneado de cabeceras SMTP; máx. 2 KB por correo, sin direcciones completas; el país no se consulta; ver ADR 0010). Los tokens de Google se cifran (Fernet).
 
 ## Dos modos
 | Modo | Para qué | Cuentas reales |

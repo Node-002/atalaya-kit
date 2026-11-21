@@ -167,8 +167,8 @@ def test_ficha_roundtrips_through_the_stored_json():
     from app.store import AlertStore
 
     store = AlertStore(None, None)
-    for mid, label, prov in demo_workforce():
-        store.add_provider(mid, label, prov)
+    for mid, label, prov, area in demo_workforce():
+        store.add_provider(mid, label, prov, area)
     store.poll()
     alert = next(a for a in store.list() if a.risk.value == "high")
     again = Alert.model_validate(alert.model_dump(mode="json"))
