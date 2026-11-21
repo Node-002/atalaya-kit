@@ -25,5 +25,10 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD python -c "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4)"
 
 # ATALAYA_MODE=demo se fuerza al arrancar: aunque la plataforma tenga otro valor, el
-# despliegue publico nunca usa modo gmail. --proxy-headers para HTTPS detras del proxy.
-CMD ["sh", "-c", "ATALAYA_MODE=demo exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --no-server-header --forwarded-allow-ips='*'"]
+# despliegue publico nunca usa modo gmail.
+# Direccion del visitante: NO se confia en las cabeceras de proxy de uvicorn (con la lista de IP de confianza en comodin, uvicorn
+# creia la PRIMERA entrada de X-Forwarded-For, que escribe el cliente, y los limites se saltaban
+# con una cabecera falsa). La app lee la entrada que agrega nuestro proxy (la ultima); si hay mas
+# de un salto propio delante (por ejemplo una CDN), subir ATALAYA_TRUSTED_HOPS. Ver ADR 0007.
+ENV ATALAYA_TRUSTED_HOPS=1
+CMD ["sh", "-c", "ATALAYA_MODE=demo exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --no-proxy-headers --no-server-header"]
