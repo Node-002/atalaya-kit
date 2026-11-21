@@ -94,11 +94,60 @@ def is_official(ascii_domain: str, official: set[str]) -> bool:
     return any(ascii_domain == d or ascii_domain.endswith("." + d) for d in official)
 
 
+def _within_one_edit(a: str, b: str) -> bool:
+    """Distancia de edicion <= 1 (cambiar, quitar, anadir o intercambiar dos letras)."""
+    if a == b:
+        return True
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        if len(diff) == 1:
+            return True
+        return (
+            len(diff) == 2
+            and diff[1] == diff[0] + 1
+            and a[diff[0]] == b[diff[1]]
+            and a[diff[1]] == b[diff[0]]
+        )
+    short, long_ = sorted((a, b), key=len)
+    return any(long_[:i] + long_[i + 1 :] == short for i in range(len(long_)))
+
+
+# Palabras que los estafadores pegan a la marca ('securepaypal', 'googleacc').
+_AFFIXES = (
+    "secure", "support", "soporte", "login", "signin", "verify", "verifica",
+    "account", "acc", "help", "ayuda", "service", "servicio", "billing", "update",
+    "alert", "security", "seguridad", "team", "online", "mail", "id", "pay", "pagos",
+)  # fmt: skip
+
+
+def _has_affixed_brand(token: str, brand: str) -> bool:
+    if len(brand) < 5 or brand == token:
+        return False
+    return any(token in (brand + w, w + brand) for w in _AFFIXES)
+
+
 def mentions_brand(stem: str, brand: str) -> bool:
     """Marcas cortas (bac, bncr) solo cuentan como palabra completa del dominio,
-    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte."""
-    tokens = re.split(r"[^a-z0-9]+", stem)
-    return brand in tokens or (len(brand) >= 8 and brand in stem)
+    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte.
+    Marcas de 6+ letras tambien con UN error de escritura en la palabra ('goggle',
+    'paypa1'); las mas cortas no, porque 'happy' o 'tigre' no son 'yappy' ni 'tigo'.
+    Tambien se unen palabras vecinas separadas por guion ('pay-pal') y se aceptan
+    marcas de 5+ letras con una palabra tipica de estafa pegada ('securepaypal')."""
+    brand = fold(brand)
+    tokens = [t for t in re.split(r"[^a-z0-9]+", stem) if t]
+    if brand in tokens or (len(brand) >= 8 and brand in stem):
+        return True
+    if any(_has_affixed_brand(t, brand) for t in tokens):
+        return True
+    if len(brand) < 6:
+        return False
+    # candidatos: palabras sueltas y pares/ternas vecinas unidas ('micro-soft')
+    cands = list(tokens)
+    for n in (2, 3):
+        cands += ["".join(tokens[i : i + n]) for i in range(len(tokens) - n + 1)]
+    return any(len(t) >= 6 and _within_one_edit(t, brand) for t in cands)
 
 
 def mentions_brand_name(folded_name: str, aliases: tuple[str, ...]) -> bool:

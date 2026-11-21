@@ -1,4 +1,4 @@
-"""Guardia de regresion: las reglas no deben empeorar sobre el corpus de 30 correos.
+"""Guardia de regresion: las reglas no deben empeorar sobre el corpus de correos.
 
 Los umbrales son un piso honesto, no un objetivo: el corpus incluye casos dificiles
 (fraude sin senales tecnicas, correos legitimos que parecen sospechosos).
@@ -11,9 +11,9 @@ from app.evaluate import evaluate, load_cases
 from app.models import Message, Risk
 
 
-def test_corpus_has_30_cases():
+def test_corpus_has_expected_cases():
     cases = load_cases()
-    assert len(cases) == 30
+    assert len(cases) == 48  # 30 originales + 18 de marcas
     assert {c["label"] for c in cases} == {"phish", "legit"}
 
 
