@@ -49,7 +49,14 @@
     <section id="panel-resumen" class="panel" role="tabpanel" aria-labelledby="tab-resumen" tabindex="-1">
       <h2>Resumen de la organización</h2>
       <div id="resumen-org"></div>
+      <div id="resumen-buscar" class="toolbar" hidden>
+        <label for="buscar-resumen">Buscar un buzón:</label>
+        <input id="buscar-resumen" type="search" maxlength="80" placeholder="Nombre o cuenta">
+        <label class="chk"><input id="solo-atencion" type="checkbox"> Solo los que necesitan atención</label>
+      </div>
       <div id="resumen-cards" class="cards-buzon"></div>
+      <p id="resumen-mas-nota" class="nota" hidden></p>
+      <button id="resumen-mas" type="button" class="btn btn-ghost" hidden>Mostrar más buzones</button>
     </section>
 
     <section id="panel-correos" class="panel" role="tabpanel" aria-labelledby="tab-correos" tabindex="-1" hidden>
@@ -64,6 +71,7 @@
     </section>
 
     <section id="campanas" class="campanas" aria-label="Campañas detectadas" hidden></section>
+    <p id="filtro-activo" class="filtro-activo" hidden></p>
     <nav id="chips" class="chips" aria-label="Filtrar los correos por grupo"></nav>
     <div id="controles" class="controles" hidden>
       <button id="expandir" type="button" class="btn btn-ghost">Expandir todo</button>
@@ -75,7 +83,12 @@
     <section id="panel-buzones" class="panel buzones" role="tabpanel" aria-labelledby="tab-buzones" tabindex="-1" hidden>
       <h2 id="titulo-buzones">Buzones vigilados</h2>
       <p class="nota">Cada persona conecta su propio correo desde un enlace que le envías con «Invitar buzón». No ve este panel.</p>
+      <div id="lista-buscar" class="toolbar" hidden>
+        <label for="buscar-lista">Buscar:</label>
+        <input id="buscar-lista" type="search" maxlength="80" placeholder="Nombre o cuenta">
+      </div>
       <ul id="buzones" class="lista-buzones"></ul>
+      <button id="lista-mas" type="button" class="btn btn-ghost" hidden>Mostrar más</button>
     </section>
 
     <section id="panel-historial" class="panel historial" role="tabpanel" aria-labelledby="tab-historial" tabindex="-1" hidden>

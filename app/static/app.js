@@ -42,6 +42,10 @@ const cardOpen = new Map(); // id de alerta -> abierta o cerrada (se conserva al
 let lastAlerts = []; // lo que se ve en «Correos» (con el filtro de buzón)
 let allAlerts = [];
 let campaignList = [];
+const PAGE = 24; // buzones por pagina: legible con 50 o 200
+const view = { resumenLimit: PAGE, listaLimit: PAGE, groupLimit: {} };
+const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const matches = (c, q) => !q || norm(c.label + " " + c.account).includes(norm(q));
 let lastCoverage = [];
 
 const alertsEl = document.getElementById("alertas");
@@ -267,7 +271,13 @@ function renderCoverage(coverage) {
   }
 
   buzonesEl.replaceChildren();
-  coverage.forEach((c) => {
+  const lq = document.getElementById("buscar-lista").value.trim();
+  document.getElementById("lista-buscar").hidden = coverage.length < 8;
+  const listed = coverage.filter((c) => matches(c, lq));
+  const moreList = document.getElementById("lista-mas");
+  moreList.hidden = listed.length <= view.listaLimit;
+  moreList.textContent = "Mostrar más (" + Math.max(0, listed.length - view.listaLimit) + " restantes)";
+  listed.slice(0, view.listaLimit).forEach((c) => {
     const ok = c.status === "connected";
     const li = el("li", "buzon");
     const info = el("div", "info");
@@ -369,6 +379,16 @@ async function load() {
 
 function applyFilter() {
   lastAlerts = filtroEl.value ? allAlerts.filter((a) => a.mailbox_id === filtroEl.value) : allAlerts;
+  const active = document.getElementById("filtro-activo");
+  const box = lastCoverage.find((c) => c.mailbox_id === filtroEl.value);
+  active.hidden = !box;
+  active.replaceChildren();
+  if (box) {
+    active.appendChild(document.createTextNode("Viendo solo los correos de "));
+    active.appendChild(el("strong", "", box.label));
+    active.appendChild(document.createTextNode(". "));
+    active.appendChild(button("Ver todos", "btn btn-ghost", () => { filtroEl.value = ""; applyFilter(); }));
+  }
   renderSummary();
   renderCampaigns();
   render();
@@ -447,8 +467,24 @@ function renderSummary() {
   badge.hidden = pend === 0;
 
   cards.replaceChildren();
-  lastCoverage.forEach((c) => {
-    const mine = allAlerts.filter((a) => a.mailbox_id === c.mailbox_id);
+  const q = document.getElementById("buscar-resumen").value.trim();
+  const onlyAttention = document.getElementById("solo-atencion").checked;
+  document.getElementById("resumen-buscar").hidden = lastCoverage.length < 8;
+  const byBox = new Map();
+  allAlerts.forEach((a) => { if (!byBox.has(a.mailbox_id)) byBox.set(a.mailbox_id, []); byBox.get(a.mailbox_id).push(a); });
+  const need = (c) => (byBox.get(c.mailbox_id) || []).filter((a) => a.priority <= 1).length + (c.status !== "connected" ? 1000 : 0);
+  const shown = lastCoverage
+    .filter((c) => matches(c, q) && (!onlyAttention || need(c) > 0))
+    .sort((a, b) => need(b) - need(a) || a.label.localeCompare(b.label, "es")); // lo urgente primero
+  const page = shown.slice(0, view.resumenLimit);
+  const more = document.getElementById("resumen-mas");
+  more.hidden = shown.length <= page.length;
+  more.textContent = "Mostrar más buzones (" + (shown.length - page.length) + " restantes)";
+  const note = document.getElementById("resumen-mas-nota");
+  note.hidden = lastCoverage.length <= PAGE;
+  note.textContent = "Mostrando " + page.length + " de " + lastCoverage.length + " buzones, los que necesitan atención primero.";
+  page.forEach((c) => {
+    const mine = byBox.get(c.mailbox_id) || [];
     const ok = c.status === "connected";
     const card = el("button", "cbuzon" + (ok ? "" : " sin-cobertura"));
     card.type = "button";
@@ -473,6 +509,7 @@ function renderSummary() {
     cards.appendChild(card);
   });
   if (!lastCoverage.length) cards.appendChild(el("p", "muted", "Todavía no hay buzones. Ve a «Buzones» para invitar a alguien."));
+  else if (!page.length) cards.appendChild(el("p", "muted", "Ningún buzón coincide con la búsqueda."));
 }
 
 function renderChips() {
@@ -528,7 +565,14 @@ function render() {
     body.id = section.id + "-cuerpo";
     toggle.append(chev, document.createTextNode(" " + g.title + " "), el("span", "n", "(" + items.length + ")"));
     h.appendChild(toggle);
-    items.forEach((a) => body.appendChild(renderAlert(a)));
+    const limit = view.groupLimit[g.key] || 40;
+    items.slice(0, limit).forEach((a) => body.appendChild(renderAlert(a)));
+    if (items.length > limit) {
+      body.appendChild(button("Mostrar más (" + (items.length - limit) + " restantes)", "btn btn-ghost", () => {
+        view.groupLimit[g.key] = limit + 40;
+        render();
+      }));
+    }
     section.append(h, body);
     nodes.push(section);
   });
@@ -640,6 +684,11 @@ showTab(window.location.hash.slice(1));
 
 // --- Arranque ------------------------------------------------------------------------------
 filtroEl.addEventListener("change", applyFilter);
+document.getElementById("buscar-resumen").addEventListener("input", () => { view.resumenLimit = PAGE; renderSummary(); });
+document.getElementById("solo-atencion").addEventListener("change", () => { view.resumenLimit = PAGE; renderSummary(); });
+document.getElementById("resumen-mas").addEventListener("click", () => { view.resumenLimit += PAGE; renderSummary(); });
+document.getElementById("buscar-lista").addEventListener("input", () => { view.listaLimit = PAGE; renderCoverage(lastCoverage); });
+document.getElementById("lista-mas").addEventListener("click", () => { view.listaLimit += PAGE; renderCoverage(lastCoverage); });
 
 document.getElementById("reset").addEventListener("click", async () => {
   try {
