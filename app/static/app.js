@@ -73,6 +73,36 @@ function button(label, cls, onClick) {
   return b;
 }
 
+// Aviso flotante con el resultado de cada accion (visible aunque la persona este mas abajo)
+let toastTimer = null;
+function say(text, kind) {
+  msgEl.textContent = text;
+  msgEl.className = "mensaje toast" + (kind ? " " + kind : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { msgEl.textContent = ""; }, kind === "error" ? 12000 : 7000);
+}
+
+// Mientras una accion se procesa, su boton queda desactivado y lo dice
+async function busy(btn, work) {
+  const label = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.classList.add("ocupado"); btn.textContent = "Procesando…"; }
+  try {
+    return await work();
+  } finally {
+    if (btn && btn.isConnected) { btn.disabled = false; btn.classList.remove("ocupado"); btn.textContent = label; }
+  }
+}
+
+// Estado vacio o de error: explica que pasa y, si se puede, ofrece una salida
+function emptyState(icon, title, text, action) {
+  const box = el("div", "vacio");
+  box.appendChild(el("div", "icono", icon));
+  box.appendChild(el("strong", "", title));
+  if (text) box.appendChild(el("p", "", text));
+  if (action) box.appendChild(action);
+  return box;
+}
+
 async function api(path, method = "GET", body) {
   const headers = { "X-Requested-With": "atalaya" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -164,21 +194,21 @@ function renderAlert(alert) {
   const actions = el("div", "actions");
   if (!readOnly && alert.status !== "quarantined") {
     const needs = alert.quarantine_needs_reason;
-    actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-danger" : "btn", () =>
+    actions.appendChild(button("Poner en cuarentena", alert.status === "pending_approval" ? "btn btn-main" : "btn", (e) =>
       act(alert.id, "approve", "Correo puesto en cuarentena: salió de la bandeja y quedó guardado en la etiqueta «Sospechoso». No se borró nada.",
-        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null)));
+        needs ? { title: "Poner en cuarentena", help: "Atalaya no lo marcó como riesgo alto. Explica por qué lo aíslas: queda en el informe del correo." } : null, e.currentTarget)));
   }
   if (!readOnly && alert.status === "pending_approval") {
-    actions.appendChild(button("Dejarlo donde está", "btn", () =>
+    actions.appendChild(button("Dejarlo donde está", "btn", (e) =>
       act(alert.id, "reject", "Se conservó la etiqueta, sin aislar el correo.",
-        { title: "Dejarlo donde está", help: "Atalaya lo marcó como riesgo alto y vas a dejarlo en la bandeja. Explica por qué: queda en el informe del correo." })));
+        { title: "Dejarlo donde está", help: "Atalaya lo marcó como riesgo alto y vas a dejarlo en la bandeja. Explica por qué: queda en el informe del correo." }, e.currentTarget)));
   }
   if (!readOnly && (alert.status === "quarantined" || (alert.risk !== "low" && alert.status !== "dismissed"))) {
     const restoring = alert.status === "quarantined";
-    actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-primary", () =>
+    actions.appendChild(button(restoring ? "Sacar de cuarentena" : "Es legítimo", "btn btn-ok", (e) =>
       act(alert.id, "legit", restoring ? "Sacado de cuarentena: el correo volvió a la bandeja de entrada." : "Marcado como legítimo: el correo volvió a la bandeja de entrada.",
         { title: restoring ? "Sacar de cuarentena" : "Es legítimo",
-          help: restoring ? "Vas a devolver el correo a la bandeja. Explica por qué no era peligroso: queda en el informe del correo." : "Explica por qué este correo es legítimo: queda en el informe del correo." })));
+          help: restoring ? "Vas a devolver el correo a la bandeja. Explica por qué no era peligroso: queda en el informe del correo." : "Explica por qué este correo es legítimo: queda en el informe del correo." }, e.currentTarget)));
   }
   const reportUrl = "/api/alerts/" + encodeURIComponent(alert.id) + "/report";
   const view = el("a", "btn btn-ghost", "Ver informe");
@@ -242,7 +272,7 @@ document.getElementById("form-motivo").addEventListener("submit", (event) => {
 document.getElementById("motivo-cancelar").addEventListener("click", () => closeReason(null));
 dlgMotivo.addEventListener("cancel", () => closeReason(null));
 
-async function act(id, verb, okMessage, reasonSpec) {
+async function act(id, verb, okMessage, reasonSpec, btn) {
   try {
     let body;
     if (reasonSpec) {
@@ -250,11 +280,13 @@ async function act(id, verb, okMessage, reasonSpec) {
       if (reason === null) return; // se canceló: no se hace nada
       body = { reason };
     }
-    await api("/api/alerts/" + encodeURIComponent(id) + "/" + verb, "POST", body);
-    msgEl.textContent = okMessage;
-    await load();
+    await busy(btn, async () => {
+      await api("/api/alerts/" + encodeURIComponent(id) + "/" + verb, "POST", body);
+      say(okMessage, "ok");
+      await load();
+    });
   } catch (err) {
-    msgEl.textContent = err.message;
+    say(err.message, "error");
   }
 }
 
@@ -284,11 +316,12 @@ function renderCoverage(coverage) {
     info.appendChild(el("strong", "", c.label));
     info.appendChild(el("span", "muted", " · " + c.account));
     li.appendChild(info);
-    li.appendChild(el("span", "badge " + (ok ? "low" : "high"), ok ? "Vigilado" : "Sin cobertura"));
+    li.appendChild(el("span", "badge " + (ok ? "low" : "medium"), ok ? "Vigilado" : "Sin cobertura"));
     if (!readOnly) li.appendChild(button("Desconectar", "btn btn-ghost", () => disconnect(c)));
     buzonesEl.appendChild(li);
   });
-  if (!coverage.length) buzonesEl.appendChild(el("li", "muted", "Todavía no hay buzones. Usa «Invitar buzón»."));
+  if (!coverage.length) buzonesEl.appendChild(emptyState("✉", "Todavía no hay buzones", "Cada persona conecta su correo con un enlace tuyo. Pulsa «Invitar buzón» arriba para crear el primero."));
+  else if (!listed.length) buzonesEl.appendChild(emptyState("⌕", "Ningún buzón coincide", "Prueba con otro nombre o cuenta."));
 
   // filtro: conserva la seleccion
   const selected = filtroEl.value;
@@ -303,10 +336,10 @@ async function disconnect(box) {
   if (!window.confirm("¿Desconectar " + box.label + "? Atalaya dejará de vigilar ese correo y se revocará su acceso.")) return;
   try {
     await api("/api/mailboxes/" + encodeURIComponent(box.mailbox_id), "DELETE");
-    msgEl.textContent = "Buzón desconectado.";
+    say("Buzón desconectado.", "ok");
     await load();
   } catch (err) {
-    msgEl.textContent = err.message;
+    say(err.message, "error");
   }
 }
 
@@ -364,7 +397,7 @@ async function loadHistory() {
     li.appendChild(el("span", "muted", " · " + actorLabel(e.actor) + (e.detail ? " · " + e.detail : "")));
     list.appendChild(li);
   });
-  if (!events.length) list.appendChild(el("li", "muted", "Todavía no hay actividad."));
+  if (!events.length) list.appendChild(emptyState("☰", "Todavía no hay actividad", "Aquí verás qué se hizo, quién y cuándo en cuanto alguien entre, invite o decida sobre un correo."));
 }
 
 async function load() {
@@ -409,13 +442,13 @@ function renderCampaigns() {
     card.appendChild(info);
     const n = c.actionable;
     const label = n === c.mailbox_count ? "Poner en cuarentena en los " + n + " buzones" : "Poner en cuarentena los " + n + " restantes";
-    if (!readOnly) card.appendChild(button(label, c.pending ? "btn btn-danger" : "btn", () =>
-      actCampaign(c, "Cuarentena aplicada a " + n + " correos de la campaña. Nada se borró: puedes sacarlos de cuarentena uno por uno.")));
+    if (!readOnly) card.appendChild(button(label, c.pending ? "btn btn-main" : "btn", (e) =>
+      actCampaign(c, "Cuarentena aplicada a " + n + " correos de la campaña. Nada se borró: puedes sacarlos de cuarentena uno por uno.", e.currentTarget)));
     box.appendChild(card);
   });
 }
 
-async function actCampaign(c, okMessage) {
+async function actCampaign(c, okMessage, btn) {
   try {
     let body;
     if (c.needs_reason) {
@@ -426,11 +459,12 @@ async function actCampaign(c, okMessage) {
       if (reason === null) return;
       body = { reason };
     }
-    const res = await api("/api/campaigns/" + encodeURIComponent(c.id) + "/quarantine", "POST", body);
-    msgEl.textContent = res.failed ? okMessage + " " + res.failed + " no se pudieron aislar." : okMessage;
+    const res = await busy(btn, () => api("/api/campaigns/" + encodeURIComponent(c.id) + "/quarantine", "POST", body));
+    say(res.failed ? okMessage + " " + res.failed + " no se pudieron aislar." : okMessage, res.failed ? "error" : "ok");
+    tourDone(2);
     await load();
   } catch (err) {
-    msgEl.textContent = err.message;
+    say(err.message, "error");
   }
 }
 
@@ -449,22 +483,64 @@ function focusMailbox(id) {
   showTab("correos");
 }
 
+// Lo mas importante primero: cuantos correos esperan una decision (rojo solo si hay riesgo alto)
+function setEstado(kind, num, title, detail, action) {
+  const box = document.getElementById("estado");
+  box.className = "panel-estado " + kind;
+  document.getElementById("estado-num").textContent = num;
+  document.getElementById("estado-titulo").textContent = title;
+  document.getElementById("estado-detalle").textContent = detail;
+  box.querySelectorAll(".btn").forEach((b) => b.remove());
+  if (action) box.appendChild(action);
+}
+
+function goDecide() {
+  ui.filter = "all";
+  showTab("correos");
+  const target = document.getElementById("grupo-decidir") || document.getElementById("grupo-revisar") || alertsEl;
+  target.scrollIntoView({ block: "start" });
+}
+
+function renderEstado(decide, review) {
+  const see = (label, primary) => button(label, primary ? "btn btn-main" : "btn", goDecide);
+  if (decide) {
+    setEstado("urgente", String(decide),
+      decide === 1 ? "correo requiere tu decisión" : "correos requieren tu decisión",
+      "Atalaya los marcó como riesgo alto. No aísla ni borra nada sin tu aprobación." + (review ? " Además hay " + review + " para revisar." : ""),
+      see(readOnly ? "Ver los correos" : "Decidir ahora", !readOnly));
+  } else if (review) {
+    setEstado("revisar", String(review),
+      review === 1 ? "correo para revisar" : "correos para revisar",
+      "Riesgo medio o bajo: míralos cuando puedas. Nada urgente.", see("Revisar", false));
+  } else {
+    const n = lastCoverage.length;
+    setEstado("ok", "✓", "Todo en orden",
+      n ? "No hay correos pendientes. Atalaya sigue vigilando " + n + (n === 1 ? " buzón." : " buzones.") : "Conecta un buzón para empezar a vigilarlo.");
+  }
+}
+
+function showLoadError(err) {
+  setEstado("error", "!", "No pudimos cargar el panel",
+    (err && err.message ? err.message + " " : "") + "Comprueba tu conexión e inténtalo otra vez.",
+    button("Reintentar", "btn btn-main", () => { load().then(() => say("Listo: el panel se cargó.", "ok")).catch(showLoadError); }));
+  document.getElementById("resumen-cards").replaceChildren();
+}
+
 function renderSummary() {
   const head = document.getElementById("resumen-org");
   const cards = document.getElementById("resumen-cards");
+  const decide = allAlerts.filter((a) => a.priority === 0).length;
   const pend = allAlerts.filter((a) => a.priority <= 1).length;
   const uncovered = lastCoverage.filter((c) => c.status !== "connected").length;
-  head.replaceChildren(
-    pend
-      ? el("p", "resumen", pend + (pend === 1 ? " correo espera" : " correos esperan") + " una decisión en " + (lastCoverage.length === 1 ? "tu buzón." : "toda la organización."))
-      : el("p", "resumen ok", "Todo en orden: no hay correos pendientes de decisión."),
-  );
+  renderEstado(decide, pend - decide);
+  head.replaceChildren();
   if (uncovered) {
-    head.appendChild(el("p", "resumen", uncovered + (uncovered === 1 ? " buzón está" : " buzones están") + " sin cobertura: Atalaya no puede vigilarlos hasta que se vuelvan a conectar."));
+    head.appendChild(el("p", "resumen aviso", uncovered + (uncovered === 1 ? " buzón está" : " buzones están") + " sin cobertura: Atalaya no puede vigilarlos hasta que se vuelvan a conectar."));
   }
   const badge = document.getElementById("n-correos");
   badge.textContent = String(pend);
-  badge.hidden = pend === 0;
+  badge.classList.toggle("sin-n", pend === 0);
+  badge.classList.toggle("urgente", decide > 0);
 
   cards.replaceChildren();
   const q = document.getElementById("buscar-resumen").value.trim();
@@ -492,7 +568,7 @@ function renderSummary() {
     card.addEventListener("click", () => focusMailbox(c.mailbox_id));
     const top = el("div", "cb-top");
     top.appendChild(el("strong", "", c.label));
-    top.appendChild(el("span", "badge " + (ok ? "low" : "high"), ok ? "Con cobertura" : "Sin cobertura"));
+    top.appendChild(el("span", "badge " + (ok ? "low" : "medium"), ok ? "Con cobertura" : "Sin cobertura"));
     card.appendChild(top);
     card.appendChild(el("div", "muted cb-cuenta", c.account));
     const counts = el("div", "cb-cuentas");
@@ -508,8 +584,9 @@ function renderSummary() {
     card.appendChild(el("div", "muted cb-chequeo", "Último chequeo: " + timeAgo(c.last_check)));
     cards.appendChild(card);
   });
-  if (!lastCoverage.length) cards.appendChild(el("p", "muted", "Todavía no hay buzones. Ve a «Buzones» para invitar a alguien."));
-  else if (!page.length) cards.appendChild(el("p", "muted", "Ningún buzón coincide con la búsqueda."));
+  cards.removeAttribute("aria-busy");
+  if (!lastCoverage.length) cards.appendChild(emptyState("✉", "Todavía no hay buzones", "Ve a «Buzones» y pulsa «Invitar buzón» para conectar el primero.", button("Ir a Buzones", "btn", () => showTab("buzones"))));
+  else if (!page.length) cards.appendChild(emptyState("⌕", "Ningún buzón coincide", "Cambia la búsqueda o quita el filtro «solo los que necesitan atención»."));
 }
 
 function renderChips() {
@@ -536,9 +613,10 @@ function render() {
   const alerts = lastAlerts;
   renderChips();
   const pendientes = alerts.filter((a) => a.priority <= 1).length;
+  const urgentes = alerts.filter((a) => a.priority === 0).length;
   const nodes = [
     pendientes
-      ? el("p", "resumen", pendientes + (pendientes === 1 ? " correo requiere" : " correos requieren") + " tu atención.")
+      ? el("p", "resumen " + (urgentes ? "urgente" : "aviso"), pendientes + (pendientes === 1 ? " correo requiere" : " correos requieren") + " tu atención" + (urgentes ? ": " + urgentes + " con riesgo alto esperando tu decisión." : "."))
       : el("p", "resumen ok", "Nada pendiente: no hay correos que requieran tu atención."),
   ];
   GROUPS.forEach((g) => {
@@ -577,7 +655,11 @@ function render() {
     nodes.push(section);
   });
   alertsEl.replaceChildren(...nodes);
-  if (!alerts.length) alertsEl.appendChild(el("p", "", "No hay correos por revisar."));
+  if (!alerts.length) {
+    alertsEl.appendChild(emptyState("✓", "Bandeja tranquila", filtroEl.value
+      ? "Este buzón no tiene correos por revisar."
+      : "Atalaya aún no ha marcado ningún correo. Cuando llegue uno sospechoso, aparecerá aquí con su explicación."));
+  }
 }
 
 document.getElementById("expandir").addEventListener("click", () => {
@@ -616,7 +698,7 @@ async function loadInvites() {
     }
     invList.appendChild(li);
   });
-  if (!invites.length) invList.appendChild(el("li", "muted", "Aún no hay invitaciones."));
+  if (!invites.length) invList.appendChild(el("li", "muted", "Aún no hay invitaciones. Escribe un nombre arriba y pulsa «Crear enlace»."));
 }
 
 document.getElementById("btn-invitar").addEventListener("click", async () => {
@@ -682,6 +764,65 @@ document.querySelectorAll(".tabs [role=tab]").forEach((tab) => {
 });
 showTab(window.location.hash.slice(1));
 
+// --- Guia de primera visita (demo): 3 pasos, se puede cerrar y volver a abrir ---------------
+const TOUR_KEY = "atalaya-guia";
+const TOUR_STEPS = [
+  { title: "Mira la campaña", text: "El mismo correo falso llegó a varios buzones a la vez. Atalaya lo detecta y lo agrupa en una sola alerta.", cta: "Ver la campaña",
+    go: () => { showTab("correos"); const c = document.getElementById("campanas"); (c.hidden ? alertsEl : c).scrollIntoView({ block: "center" }); } },
+  { title: "Aíslala con tu aprobación", text: "Pulsa el botón de la campaña para poner todos esos correos en cuarentena. Nada se borra y puedes deshacerlo.", cta: "Ir al botón",
+    go: () => { showTab("correos"); const b = document.querySelector("#campanas .btn"); if (b) { b.scrollIntoView({ block: "center" }); b.focus(); } else say("No hay campañas activas. Usa «Reiniciar demostración» para verla otra vez."); } },
+  { title: "Cambia a supervisor", text: "Mira cómo se ve el panel para alguien que solo puede leer: no puede aprobar ni invitar.", cta: "Ver como supervisor",
+    go: () => { const b = document.getElementById("btn-rol"); if (b && !b.hidden) { b.scrollIntoView({ block: "center" }); b.focus(); } } },
+];
+function loadTour() {
+  try { return Object.assign({ done: [], closed: false }, JSON.parse(localStorage.getItem(TOUR_KEY) || "{}")); }
+  catch { return { done: [], closed: false }; }
+}
+function saveTour(t) { try { localStorage.setItem(TOUR_KEY, JSON.stringify(t)); } catch { /* sin almacenamiento */ } }
+function tourDone(step) {
+  const t = loadTour();
+  if (!t.done.includes(step)) { t.done.push(step); saveTour(t); }
+  if (!document.getElementById("guia").hidden) drawTour();
+}
+function drawTour() {
+  const t = loadTour();
+  const current = TOUR_STEPS.findIndex((_, i) => !t.done.includes(i + 1));
+  const box = document.getElementById("guia");
+  if (current === -1) { box.hidden = true; return; }
+  const step = TOUR_STEPS[current];
+  document.getElementById("guia-paso").textContent = "Paso " + (current + 1) + " de " + TOUR_STEPS.length;
+  document.getElementById("guia-titulo").textContent = step.title;
+  document.getElementById("guia-texto").textContent = step.text;
+  const hacer = document.getElementById("guia-hacer");
+  hacer.textContent = step.cta;
+  hacer.onclick = () => { step.go(); if (current === 0) tourDone(1); };
+  const dots = document.getElementById("guia-puntos");
+  dots.replaceChildren();
+  TOUR_STEPS.forEach((_, i) => dots.appendChild(el("span", "puntito" + (t.done.includes(i + 1) ? " hecho" : i === current ? " actual" : ""))));
+  box.hidden = false;
+}
+function startTour(enabled) {
+  const open = document.getElementById("guia-abrir"); // no existe en modo conectado
+  if (open) open.hidden = !enabled;
+  if (!enabled) return;
+  if (!loadTour().closed) drawTour();
+}
+document.getElementById("guia-cerrar").addEventListener("click", () => {
+  const t = loadTour(); t.closed = true; saveTour(t);
+  document.getElementById("guia").hidden = true;
+  const open = document.getElementById("guia-abrir");
+  if (open) open.focus();
+});
+document.getElementById("guia-abrir").addEventListener("click", () => {
+  const t = loadTour(); t.closed = false;
+  if (t.done.length >= TOUR_STEPS.length) t.done = [];
+  saveTour(t); drawTour();
+  document.getElementById("guia-hacer").focus();
+});
+document.getElementById("guia").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") document.getElementById("guia-cerrar").click();
+});
+
 // --- Arranque ------------------------------------------------------------------------------
 filtroEl.addEventListener("change", applyFilter);
 document.getElementById("buscar-resumen").addEventListener("input", () => { view.resumenLimit = PAGE; renderSummary(); });
@@ -693,10 +834,10 @@ document.getElementById("lista-mas").addEventListener("click", () => { view.list
 document.getElementById("reset").addEventListener("click", async () => {
   try {
     await api("/api/demo/reset", "POST");
-    msgEl.textContent = "Demostración reiniciada.";
+    say("Demostración reiniciada: los correos volvieron a su estado inicial.", "ok");
     await load();
   } catch (err) {
-    msgEl.textContent = err.message;
+    say(err.message, "error");
   }
 });
 
@@ -729,19 +870,27 @@ async function init() {
     document.getElementById("banner-rol").hidden = false;
     ["btn-invitar", "reset"].forEach((id) => { document.getElementById(id).hidden = true; });
   }
+  const toggle = document.getElementById("btn-rol");
+  if (!who.demo_roles) toggle.hidden = true;
   if (who.demo_roles) {
-    const toggle = document.getElementById("btn-rol");
-    toggle.hidden = false;
+    toggle.classList.remove("reserva");
     toggle.textContent = readOnly ? "Volver a administración" : "Ver como supervisor";
+    toggle.title = toggle.textContent;
     toggle.addEventListener("click", async () => {
-      await api("/api/demo/role", "POST", { role: readOnly ? "admin" : "supervisor" });
-      window.location.reload();
+      try {
+        await api("/api/demo/role", "POST", { role: readOnly ? "admin" : "supervisor" });
+        if (!readOnly) tourDone(3);
+        window.location.reload();
+      } catch (err) {
+        say(err.message, "error");
+      }
     });
   }
   document.body.classList.add("listo"); // ya se sabe si hay boton de rol: se libera el espacio reservado
+  startTour(mode === "demo" && !readOnly && !!who.demo_roles);
   await load();
   document.body.classList.add("animar"); // entrada suave solo al abrir, no en cada refresco
   setTimeout(() => document.body.classList.remove("animar"), 1200);
 }
 
-init().catch((err) => { msgEl.textContent = err.message; });
+init().catch((err) => { document.body.classList.add("listo"); showLoadError(err); });
