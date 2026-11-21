@@ -22,6 +22,7 @@ from fastapi.responses import (
     JSONResponse,
     PlainTextResponse,
     RedirectResponse,
+    Response,
 )
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -38,6 +39,7 @@ from app.providers.base import MailProvider
 from app.providers.demo import DemoProvider, demo_workforce
 from app.registry import Registry
 from app.report import build_org_report, build_report
+from app.report_pdf import build_alert_pdf, build_org_pdf
 from app.store import AlertStore, ReasonRequired
 
 load_dotenv()
@@ -374,9 +376,26 @@ def create_app(
     def legit(alert_id: str, request: Request, body: DecisionIn | None = None) -> Alert:
         return _act(store.mark_legit, alert_id, request, "alert_legit", body)
 
+    def _pdf_response(data: bytes, filename: str, download: bool) -> Response:
+        disposition = "attachment" if download else "inline"
+        return Response(
+            data,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'{disposition}; filename="{filename}"',
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
     @app.get("/api/alerts/{alert_id}/report")
-    def alert_report(alert_id: str, download: bool = False) -> PlainTextResponse:
+    def alert_report(
+        alert_id: str, download: bool = False, formato: Literal["txt", "pdf"] = "txt"
+    ) -> Response:
         alert = _alert_or_404(alert_id)
+        if formato == "pdf":
+            return _pdf_response(
+                build_alert_pdf(alert, org_name), f"informe-{alert.id}.pdf", download
+            )
         disposition = "attachment" if download else "inline"
         return PlainTextResponse(
             build_report(alert),
@@ -486,7 +505,22 @@ def create_app(
         return response
 
     @app.get("/api/org-report")
-    def org_report(download: bool = False) -> PlainTextResponse:
+    def org_report(
+        request: Request, download: bool = False, formato: Literal["txt", "pdf"] = "txt"
+    ) -> Response:
+        if formato == "pdf":
+            alerts = store.list()
+            return _pdf_response(
+                build_org_pdf(
+                    org_name,
+                    alerts,
+                    registry.list_audit(200),
+                    campaigns.find_campaigns(alerts),
+                    generated_by=actor_of(request),
+                ),
+                "informe-organizacion.pdf",
+                download,
+            )
         disposition = "attachment" if download else "inline"
         return PlainTextResponse(
             build_org_report(org_name, store.list(), registry.list_audit(200)),

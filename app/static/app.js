@@ -216,7 +216,11 @@ function renderAlert(alert) {
   view.target = "_blank";
   view.rel = "noopener";
   actions.appendChild(view);
-  const download = el("a", "btn btn-ghost", "Descargar informe");
+  const pdf = el("a", "btn btn-ghost", "Descargar PDF");
+  pdf.href = reportUrl + "?formato=pdf&download=true";
+  pdf.setAttribute("download", "");
+  actions.appendChild(pdf);
+  const download = el("a", "btn btn-ghost", "Descargar texto");
   download.href = reportUrl + "?download=true";
   download.setAttribute("download", "");
   actions.appendChild(download);
