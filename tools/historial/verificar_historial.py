@@ -155,6 +155,13 @@ def main():
     else:
         print("    orden topologico: identico (por commit-map)")
 
+    fmt_t = "%(refname) %(objecttype) %(taggerdate:iso-strict) %(taggername) %(taggeremail)"
+    tags_o = git(old, "for-each-ref", "refs/tags", f"--format={fmt_t}").decode(errors="replace").splitlines()
+    tags_n = git(new, "for-each-ref", "refs/tags", f"--format={fmt_t}").decode(errors="replace").splitlines()
+    print(f"    etiquetas: original={len(tags_o)} nuevo={len(tags_n)}; fechas y autores de etiquetas {'iguales' if tags_o == tags_n else 'DISTINTOS'}")
+    if tags_o != tags_n:
+        fail("las etiquetas cambiaron de fecha, autor o tipo")
+
     # --- (c) archivos y diferencias ---------------------------------------------------
     print("(c) Por cada par de commits: mismos archivos y solo lineas con reemplazos")
 
