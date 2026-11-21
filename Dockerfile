@@ -15,6 +15,7 @@ COPY app ./app
 
 # Usuario sin privilegios
 RUN useradd --system --no-create-home --uid 10001 atalaya
+# hadolint ignore=DL3066
 USER atalaya
 
 # La plataforma (Render/Railway) define PORT; 8000 por defecto en local.
@@ -22,7 +23,7 @@ ENV PORT=8000
 EXPOSE 8000
 
 # Comprobacion de salud de la propia imagen (usa solo la biblioteca estandar).
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD python -c "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4)"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3   CMD ["python", "-c", "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('PORT','8000'), timeout=4)"]
 
 # ATALAYA_MODE=demo se fuerza al arrancar: aunque la plataforma tenga otro valor, el
 # despliegue publico nunca usa modo gmail.
