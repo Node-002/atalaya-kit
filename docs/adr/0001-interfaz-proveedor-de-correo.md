@@ -5,7 +5,7 @@
 - **Contexto de trabajo:** hackathon, en solitario, ~3 días
 
 ## Contexto
-Atalaya debe vigilar el correo de organizaciones que pueden usar Gmail (Google Workspace) o Microsoft 365. Aún no se sabe cuál domina entre las personas entrevistadas (la una universidad pública usa Microsoft 365; el resto se decide por entrevistas). Además, Gmail en modo de pruebas solo admite usuarios registrados, por lo que los jueces no podrían iniciar sesión: hace falta un modo demo que funcione sin cuentas reales.
+Atalaya debe vigilar el correo de organizaciones que pueden usar Gmail (Google Workspace) o Microsoft 365. Aún no se sabe cuál domina entre las personas entrevistadas (una universidad pública usa Microsoft 365; el resto se decide por entrevistas). Además, Gmail en modo de pruebas solo admite usuarios registrados, por lo que los jueces no podrían iniciar sesión: hace falta un modo demo que funcione sin cuentas reales.
 
 ## Decisión
 Toda lectura y acción sobre el correo pasa por una interfaz `MailProvider`. El núcleo (analizadores, motor de decisión, API, panel) no conoce a Gmail ni a Microsoft.

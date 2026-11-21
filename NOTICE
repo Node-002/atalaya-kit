@@ -1,0 +1,28 @@
+Atalaya
+Copyright (C) 2026 Atalaya
+
+Este programa es software libre bajo la GNU Affero General Public License v3.0
+(AGPL-3.0). Ver el archivo LICENSE.
+
+Atalaya incluye o usa los siguientes componentes de terceros, cada uno bajo su
+propia licencia:
+
+Incluidos en el repositorio (app/static)
+- Fuentes Inter (SIL Open Font License 1.1):
+  app/static/fonts/LICENSE-inter.txt
+- Fuentes JetBrains Mono (SIL Open Font License 1.1):
+  app/static/fonts/LICENSE-jetbrains-mono.txt
+  Aviso de las fuentes: app/static/fonts/NOTICE.txt
+- Iconos Lucide (licencia ISC):
+  app/static/icons/LICENSE-lucide.txt
+
+Dependencias de ejecucion (instaladas con requirements.txt, no incluidas aqui)
+- ReportLab (BSD-3-Clause): generacion de informes en PDF.
+- Pillow (MIT-CMU / HPND): dependencia de ReportLab.
+- certifi (MPL-2.0): se usa sin modificarla.
+- FastAPI, Starlette, Pydantic, Uvicorn, HTTPX, Requests, Cryptography,
+  Google API Client y SDK de Anthropic: MIT, BSD o Apache-2.0.
+  Las versiones exactas estan fijadas en requirements.txt.
+
+Dependencias de desarrollo (requirements-dev.txt): pytest, ruff, bandit,
+pip-audit y otras herramientas, cada una bajo su licencia.
