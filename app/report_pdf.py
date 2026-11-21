@@ -405,6 +405,35 @@ def _reason(action) -> str:
     )
 
 
+def _ficha_block(alert: Alert, w: float) -> list:
+    """Metadatos tecnicos guardados (lista blanca de cabeceras). Todo pasa por _safe (via p)."""
+    f = alert.ficha
+    out: list = [p("Datos técnicos del mensaje (solo cabeceras)", H2)]
+    if f is None:
+        out.append(p("Sin datos técnicos guardados para este correo.", BODY))
+        return out
+    auth = " · ".join(
+        f"{n}: {(v or 'sin dato').upper()}"
+        for n, v in (("SPF", f.spf), ("DKIM", f.dkim), ("DMARC", f.dmarc))
+    )
+    rows = [
+        ("Autenticación", auth),
+        ("IP de origen", f"{f.source_ip or 'no encontrada'} (el país no se consulta)"),
+        ("Vector de ataque", f.vector or "—"),
+        ("Return-Path", f.return_path or "—"),
+        ("Dominio de Reply-To", f.reply_to_domain or "—"),
+        ("Enlaces (host neutralizado)", ", ".join(f.link_hosts) or "—"),
+    ]
+    out.append(
+        _table([[p(k, CELLB), p(v, CELL)] for k, v in rows], [w * 0.3, w * 0.7], header=False)
+    )
+    if f.smtp:
+        out.append(Spacer(1, 4))
+        out.append(p("Cabeceras SMTP saneadas (sin direcciones completas):", BODY))
+        out.append(_table([[p(line, CELL)] for line in f.smtp], [w], header=False))
+    return out
+
+
 # --- Informe de un correo -------------------------------------------------------------------
 def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     now = datetime.now(UTC)
@@ -460,6 +489,8 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
         story.append(_table(rows, [w * 0.86, w * 0.14]))
     else:
         story.append(p("No se detectó ninguna señal de riesgo.", BODY))
+
+    story += _ficha_block(alert, w)
 
     story.append(p("2. Decisiones de las personas", H2))
     human = _decisions(alert)

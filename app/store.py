@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from app import analyzers, campaigns, decision
+from app.ficha import build_ficha
 from app.llm import Explainer, LLMVerdict, semantic_signals
 from app.models import ActionRecord, Alert, Message, Risk, Signal, Status
 from app.providers.base import MailProvider
@@ -198,6 +199,7 @@ class AlertStore:
                 sender_domain=domain,
                 sender_key=sender_key,
                 topic_key=topic_key,
+                ficha=build_ficha(msg, signals),
                 risk=risk,
                 signals=signals,
                 explanation=verdict.explanation
