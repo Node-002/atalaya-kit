@@ -23,6 +23,7 @@ Organizaciones pequeñas con **5 a 100 buzones** que usan Gmail/Google Workspace
 ## 3. Modelo de ingresos y precio — HIPÓTESIS
 - **Modelo:** suscripción mensual **por buzón protegido**, con prueba gratuita. Alternativas anotadas en [NEGOCIO_Y_PROBLEMA.md](NEGOCIO_Y_PROBLEMA.md): servicio alojado (A), kit autoalojado (B), motor de análisis para otros desarrolladores (C).
 - **Precio:** **no hay precio definido.** Decisión pendiente de la persona autora. Para decidirlo hace falta (a) medir el costo real de IA por correo y (b) comparar con precios **verificados** de la competencia. La encuesta pregunta el rango de pago razonable (US$0 a más de US$10 por buzón/mes): es una muestra pequeña y no representativa.
+- **Decisión de entrega (nov 2026): kit autoalojado**, no servicio alojado ([ADR 0012](adr/0012-kit-autoalojado-en-lugar-de-servicio-alojado.md)). Cada organización instala su copia con su propia aplicación de Google «Interna»; se vende el software (**AGPL-3.0 más licencia comercial**), las instrucciones y, quizá, ayuda de instalación. Ingresos posibles (todos **sin validar**): licencia del kit, licencia comercial, ayuda de instalación. La ficha con la tabla de precio por definir está en [MARKETPLACE_FICHA.md](MARKETPLACE_FICHA.md). La suscripción por buzón de arriba solo tendría sentido con un servicio alojado (etapa 3 de la hoja de ruta, cuando Google verifique la app).
 - **Marketplace de Dojo:** el creador se queda con el 85 % de cada venta (confirmado en el kickoff, según [PREGUNTAS_ORGANIZADORES.md](PREGUNTAS_ORGANIZADORES.md)); **cómo se entrega y cobra el producto sigue sin respuesta por escrito.**
 
 ## 4. Costos principales
@@ -45,7 +46,10 @@ Organizaciones pequeñas con **5 a 100 buzones** que usan Gmail/Google Workspace
 |---|---|
 | **Demanda no validada:** sin clientes ni entrevistas | Encuesta y entrevistas; hasta entonces, todo es hipótesis |
 | **Detección limitada:** sin adjuntos, sin reputación de enlaces, 21/24 y 3/24 en corpus sintético | Declararlo; decisión humana siempre; medir con correos reales |
-| **Verificación de Google** lenta o costosa | Modo kit autoalojado (B) evitaría custodiar cuentas de terceros |
+| **Verificación de Google** lenta o costosa | Se esquiva con el kit autoalojado (aplicación «Interna» de cada organización): hoy es la vía elegida. **No verificado con una organización Workspace real**; falta confirmar si una app interna con `gmail.modify` queda exenta de la evaluación de seguridad |
+| **Fricción de instalación del kit:** requiere Workspace, una persona de TI, Docker, dominio y HTTPS | Guía paso a paso, verificador y evaluación en `localhost`; sin medir con una persona real. Público más pequeño que el de un servicio con un clic |
+| **Soporte sin acceso a los datos del cliente** (no vemos sus registros) y sin soporte garantizado | Documentación y verificador; definir qué soporte se ofrece |
+| **Ingresos:** la AGPL permite que otra persona despliegue y revenda el kit | Licencia comercial y servicio de instalación como diferencial; **sin validar** que alguien pague |
 | **Solo Gmail:** parte del mercado usa Microsoft 365 | No construido; la pregunta está en la encuesta |
 | **Competidores grandes** (Google/Microsoft ya incluyen filtros) | Nicho: español y organizaciones pequeñas; no competir en detección |
 | **Privacidad y ley** (datos personales en correos) | Minimización, cifrado, textos legales por revisar con una persona abogada |

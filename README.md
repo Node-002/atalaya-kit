@@ -26,7 +26,7 @@ El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlac
 - Solo Gmail; **Microsoft 365 no está construido**.
 - La explicación con IA real (Anthropic) está implementada pero **no se ha probado con saldo real**.
 - La medición de detección usa un corpus **sintético** que escribimos nosotros: 21 de 24 intentos detectados y 3 de 24 correos legítimos marcados de más ([docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md)). No es una medición con correos reales.
-- Google solo permite usuarios de prueba (máximo 100) hasta verificar la aplicación.
+- Para el servicio alojado, Google exigiría verificar la aplicación (mientras tanto, máximo 100 usuarios de prueba). Por eso el producto se entrega como kit autoalojado con aplicación «Interna» de cada organización (ver arriba); esa vía **no está verificada con una organización real**.
 
 ## Cómo funciona
 ```
@@ -44,6 +44,11 @@ Gmail ──(consulta periódica, solo bandeja de entrada, últimos 7 días)─�
 | `gmail` | Uso real en tu computadora, con inicio de sesión de administración con Google y usuarios de prueba | Sí (solo local) |
 
 **El despliegue público es solo modo demo.** Ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+## Instalación para organizaciones (kit autoalojado)
+Cada organización con **Google Workspace** puede instalar su propia copia de Atalaya en su infraestructura, con su propia aplicación de Google marcada como «Interna» y sus propias claves; **nosotros nunca vemos sus correos, tokens ni claves**. El kit trae `docker-compose.yml` (etapa `kit` del `Dockerfile`), un `Caddyfile` de ejemplo con HTTPS automático, `.env.kit.example`, herramientas en `tools/kit/` (verificador, respaldo, restauración) y una guía paso a paso: [docs/INSTALACION.md](docs/INSTALACION.md) (incluye una evaluación en 15 minutos en `localhost`). Razonamiento y hoja de ruta (Microsoft 365, servicio alojado más adelante): [ADR 0012](docs/adr/0012-kit-autoalojado-en-lugar-de-servicio-alojado.md). Ficha del producto: [docs/MARKETPLACE_FICHA.md](docs/MARKETPLACE_FICHA.md).
+
+**Estado:** se probó en Python (arranque, comprobaciones previas y pruebas automáticas); **no se ha probado con una organización de Google Workspace real**, y Docker/Compose/Caddy solo los ejercita el trabajo `kit` del CI. La demo pública no cambia: sigue siendo solo modo demo.
 
 ## Probarlo en tu computadora (modo demo)
 Requisitos: Python 3.12.
