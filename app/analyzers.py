@@ -1,7 +1,7 @@
 """Reglas de analisis (version minima del viernes). Los hechos los calcula el codigo,
 la IA solo redactara la explicacion mas adelante.
 
-Pendiente: lista de marcas CR/PA a verificar con nombres reales.
+Pendiente: verificar con nombres reales los dominios oficiales de la lista de marcas.
 """
 
 import re
@@ -10,18 +10,75 @@ from email.utils import parseaddr
 from app import lookalike
 from app.models import Message, Signal
 
-# Marca -> dominios legitimos. VERIFICAR nombres reales antes de usar en produccion.
+_GOOGLE = {"google.com", "gmail.com", "googlemail.com", "google.com.pa", "google.co.cr"}
+_MICROSOFT = {
+    "microsoft.com",
+    "microsoftonline.com",
+    "outlook.com",
+    "office.com",
+    "office365.com",
+    "live.com",
+    "hotmail.com",
+}
+_APPLE = {"apple.com", "icloud.com"}
+_AMAZON = {"amazon.com", "amazon.es", "amazon.com.mx", "amazon.co.uk", "amazon.de"}
+_FACEBOOK = {"facebook.com", "facebookmail.com", "fb.com", "meta.com", "messenger.com"}
+_DAVIVIENDA = {"davivienda.com", "davivienda.com.pa", "davivienda.cr"}
+_CW = {"cwpanama.com", "cwpanama.net"}
+
+# Marca (palabra que aparece en el dominio) -> dominios legitimos. Los subdominios de
+# un dominio oficial tambien son oficiales. VERIFICAR nombres reales antes de produccion.
+# Una misma empresa puede tener varias palabras (google y gmail comparten dominios).
 BRANDS: dict[str, set[str]] = {
     "bancogeneral": {"bancogeneral.com"},
     "bncr": {"bncr.fi.cr"},
     "bac": {"baccredomatic.com"},
+    "banistmo": {"banistmo.com"},
+    "banconal": {"banconal.com.pa"},
+    "davivienda": _DAVIVIENDA,
+    "yappy": {"yappy.com.pa"},
+    "tigo": {"tigo.com.pa", "tigo.com", "tigo.cr"},
+    "cwpanama": _CW,
+    "google": _GOOGLE,
+    "gmail": _GOOGLE,
+    "microsoft": _MICROSOFT,
+    "outlook": _MICROSOFT,
+    "office365": _MICROSOFT,
+    "netflix": {"netflix.com"},
+    "dropbox": {"dropbox.com", "dropboxmail.com"},
+    "paypal": {"paypal.com", "paypal.me"},
+    "apple": _APPLE,
+    "icloud": _APPLE,
+    "amazon": _AMAZON,
+    "facebook": _FACEBOOK,
+    "dhl": {"dhl.com", "dhl.de", "dhl.es", "dhl.co.uk"},
 }
 
-# Nombres con los que una marca se muestra a la gente (VERIFICAR).
+# Nombres con los que una marca se muestra a la gente (VERIFICAR). No se usa "meta"
+# sola porque en espanol es una palabra comun.
 BRAND_NAMES: dict[str, tuple[str, ...]] = {
     "bancogeneral": ("banco general", "bancogeneral"),
     "bncr": ("bncr", "banco nacional de costa rica"),
     "bac": ("bac credomatic", "credomatic", "bac"),
+    "banistmo": ("banistmo",),
+    "banconal": ("banco nacional de panama", "banconal"),
+    "davivienda": ("davivienda",),
+    "yappy": ("yappy",),
+    "tigo": ("tigo",),
+    "cwpanama": ("cable & wireless", "cable and wireless", "cwpanama"),
+    "google": ("google",),
+    "gmail": ("gmail",),
+    "microsoft": ("microsoft",),
+    "outlook": ("outlook",),
+    "office365": ("office 365", "office365"),
+    "netflix": ("netflix",),
+    "dropbox": ("dropbox",),
+    "paypal": ("paypal",),
+    "apple": ("apple",),
+    "icloud": ("icloud",),
+    "amazon": ("amazon",),
+    "facebook": ("facebook", "meta platforms"),
+    "dhl": ("dhl",),
 }
 
 SHORTENERS = {"bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "cutt.ly"}

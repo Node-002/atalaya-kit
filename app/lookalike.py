@@ -94,11 +94,38 @@ def is_official(ascii_domain: str, official: set[str]) -> bool:
     return any(ascii_domain == d or ascii_domain.endswith("." + d) for d in official)
 
 
+def _within_one_edit(a: str, b: str) -> bool:
+    """Distancia de edicion <= 1 (cambiar, quitar, anadir o intercambiar dos letras)."""
+    if a == b:
+        return True
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        if len(diff) == 1:
+            return True
+        return (
+            len(diff) == 2
+            and diff[1] == diff[0] + 1
+            and a[diff[0]] == b[diff[1]]
+            and a[diff[1]] == b[diff[0]]
+        )
+    short, long_ = sorted((a, b), key=len)
+    return any(long_[:i] + long_[i + 1 :] == short for i in range(len(long_)))
+
+
 def mentions_brand(stem: str, brand: str) -> bool:
     """Marcas cortas (bac, bncr) solo cuentan como palabra completa del dominio,
-    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte."""
+    para no marcar 'backups-empresa'. Marcas largas y distintivas tambien como parte.
+    Marcas de 6+ letras tambien con UN error de escritura en la palabra ('goggle',
+    'paypa1'); las mas cortas no, porque 'happy' o 'tigre' no son 'yappy' ni 'tigo'."""
+    brand = fold(brand)
     tokens = re.split(r"[^a-z0-9]+", stem)
-    return brand in tokens or (len(brand) >= 8 and brand in stem)
+    if brand in tokens or (len(brand) >= 8 and brand in stem):
+        return True
+    return len(brand) >= 6 and any(
+        len(t) >= 6 and _within_one_edit(t, brand) for t in tokens
+    )
 
 
 def mentions_brand_name(folded_name: str, aliases: tuple[str, ...]) -> bool:

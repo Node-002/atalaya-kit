@@ -1,4 +1,6 @@
-# Resultados de detección — corpus de 30 correos (20 nov 2026)
+# Resultados de detección — corpus de correos (20 nov 2026)
+
+> **Actualización (marcas ampliadas):** el corpus pasó de 30 a 48 correos. Las secciones de abajo describen los **30 originales**; la comparación antes/después de la ampliación de marcas está en la última sección.
 
 > Reproducir: `python -m app.evaluate` (tabla) o `python -m app.evaluate --json`. Corpus en `app/tests/fixtures/corpus.json`.
 > **Advertencia metodológica:** los 30 correos son **sintéticos** y los escribió el propio desarrollador, que conoce las reglas. No son una muestra representativa del correo real. Se incluyeron a propósito casos difíciles para no inflar los números. Las cifras son **orientativas**, no una medición de rendimiento en producción.
@@ -47,9 +49,34 @@ Antes de este cambio, un dominio como `b[a cirílica]ncogeneral.com` o con una v
 - **También se revisan** la dirección de respuesta y los enlaces, no solo el remitente.
 - **No marca** dominios en español legítimos con tildes o ñ, ni subdominios oficiales.
 
-**Limitaciones:** la tabla de confusables es parcial (no es la lista completa de Unicode, UTS #39); la lista de marcas son 3 y está pendiente de verificar con nombres reales; solo se detecta el parecido con marcas de esa lista (un dominio parecido a una marca desconocida no se detecta); y no se evalúan trucos visuales dentro de imágenes del correo.
+**Limitaciones:** la tabla de confusables es parcial (no es la lista completa de Unicode, UTS #39); la lista de marcas (ahora 22 palabras, ver abajo) está pendiente de verificar con nombres reales; solo se detecta el parecido con marcas de esa lista (un dominio parecido a una marca desconocida no se detecta); y no se evalúan trucos visuales dentro de imágenes del correo.
 
 ## Siguiente
 1. Medir el efecto de la explicación con IA sobre P06, P08 y P13 (y sobre L03, L08, L14) cuando esté integrada.
 2. Ampliar el corpus con correos de las pruebas reales de Gmail y, si es posible, correos de phishing públicos anonimizados.
 3. No ajustar las reglas solo para mejorar estos números (riesgo de sobreajuste al corpus propio).
+
+## Ampliación de marcas y errores de escritura (typosquatting)
+Se añadieron 19 palabras de marca (Google/Gmail, Microsoft/Outlook/Office365, Netflix, Dropbox, PayPal, Apple/iCloud, Amazon, Facebook, DHL, Banistmo, Banco Nacional de Panamá, Davivienda, Yappy, Tigo, Cable & Wireless) con sus dominios oficiales (los subdominios cuentan como oficiales). Además, las marcas de **6 o más letras** detectan **un error de escritura** en una palabra del dominio (cambiar, quitar, añadir o intercambiar una letra: `goggle`, `googel`, `microsft`; y con cifras: `micros0ft`, `paypa1`). Las marcas cortas (`bac`, `bncr`, `dhl`, `tigo`, `yappy`) siguen exigiendo la palabra completa, y `backups-empresa` sigue sin marcarse. **No se cambiaron pesos ni umbrales:** usa `lookalike_domain` (35), `homograph_domain` (30) y `display_name_brand` (30), medio ≥30, alto ≥60.
+
+Se añadieron 18 correos sintéticos (`.example`): 10 de phishing (P15–P24) y 8 legítimos o parecidos (L17–L24: dominios oficiales, `happy`, `tigre`, «Meta del mes», `googol`).
+
+### Medición (`python -m app.evaluate`)
+| Medida | Corpus original (30), antes | Corpus original (30), después | Corpus ampliado (48), código **anterior** | Corpus ampliado (48), código **nuevo** |
+|---|---|---|---|---|
+| Phishing detectado | 11/14 (79 %) | 11/14 (79 %) | 11/24 (46 %) | **21/24 (88 %)** |
+| Falsos positivos | 3/16 (19 %) | 3/16 (19 %) | 3/24 (12 %) | 3/24 (12 %) |
+| Precisión de «riesgo alto» | 88 % (8) | 88 % (8) | 88 % (8) | 93 % (14) |
+
+**Lectura honesta:**
+- Sobre los 30 originales **no cambia nada** (no empeora ni mejora): esos casos no usaban marcas nuevas.
+- La mejora en el corpus ampliado (46 % → 88 %) es **esperable y poco informativa**: los 10 casos nuevos los escribí yo para esta función, y el código viejo no podía detectarlos. No es una estimación del rendimiento real.
+- **Falsos positivos nuevos: 0** en el corpus (los mismos 3 de antes: L03, L08, L14). Los 8 legítimos nuevos pasan como riesgo bajo.
+- Siguen sin detectarse P06, P08 y P13 (ingeniería social sin señales técnicas).
+
+### Riesgos y límites que quedan
+- **Falsos positivos probables fuera del corpus:** un dominio legítimo cuya palabra sea idéntica a una marca corta (`apple-huerto.example`, `tigo-...`) o difiera en una letra de una larga (`amazona`, `outlock`) se marcará. Es un riesgo de diseño, mitigado porque la acción siempre pide aprobación humana.
+- No se detecta `rn` en lugar de `m` (`rnicrosoft`), ni la marca pegada a otra palabra (`googleacc`, `paypalsupport`) cuando la marca tiene menos de 8 letras.
+- Los dominios oficiales están escritos de memoria y **hay que verificarlos**: si falta uno legítimo (p. ej. un dominio regional de Amazon o Tigo), sus correos se marcarían como falsos.
+- «Meta» (Facebook) no se busca como palabra suelta porque en español es corriente; solo `facebook` y «Meta Platforms».
+
