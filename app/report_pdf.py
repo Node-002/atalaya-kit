@@ -405,6 +405,35 @@ def _reason(action) -> str:
     )
 
 
+def _ficha_block(alert: Alert, w: float) -> list:
+    """Metadatos tecnicos guardados (lista blanca de cabeceras). Todo pasa por _safe (via p)."""
+    f = alert.ficha
+    out: list = [p("Datos técnicos del mensaje (solo cabeceras)", H2)]
+    if f is None:
+        out.append(p("Sin datos técnicos guardados para este correo.", BODY))
+        return out
+    auth = " · ".join(
+        f"{n}: {(v or 'sin dato').upper()}"
+        for n, v in (("SPF", f.spf), ("DKIM", f.dkim), ("DMARC", f.dmarc))
+    )
+    rows = [
+        ("Autenticación", auth),
+        ("IP de origen", f"{f.source_ip or 'no encontrada'} (el país no se consulta)"),
+        ("Vector de ataque", f.vector or "—"),
+        ("Return-Path", f.return_path or "—"),
+        ("Dominio de Reply-To", f.reply_to_domain or "—"),
+        ("Enlaces (host neutralizado)", ", ".join(f.link_hosts) or "—"),
+    ]
+    out.append(
+        _table([[p(k, CELLB), p(v, CELL)] for k, v in rows], [w * 0.3, w * 0.7], header=False)
+    )
+    if f.smtp:
+        out.append(Spacer(1, 4))
+        out.append(p("Cabeceras SMTP saneadas (sin direcciones completas):", BODY))
+        out.append(_table([[p(line, CELL)] for line in f.smtp], [w], header=False))
+    return out
+
+
 # --- Informe de un correo -------------------------------------------------------------------
 def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     now = datetime.now(UTC)
@@ -461,6 +490,8 @@ def build_alert_pdf(alert: Alert, org_name: str) -> bytes:
     else:
         story.append(p("No se detectó ninguna señal de riesgo.", BODY))
 
+    story += _ficha_block(alert, w)
+
     story.append(p("2. Decisiones de las personas", H2))
     human = _decisions(alert)
     if not human:
@@ -506,7 +537,6 @@ def build_org_pdf(
     quarantined = sum(a.status is Status.quarantined for a in alerts)
     pending = sum(a.status is Status.pending_approval for a in alerts)
     reviewed = sum(bool(_decisions(a)) for a in alerts)
-    boxes = {a.mailbox_id: a.mailbox_label or a.mailbox_id for a in alerts}
 
     story: list = [p("Informe de la organización", TITLE), p(org_name, SUBTITLE)]
     if generated_by:
@@ -540,26 +570,28 @@ def build_org_pdf(
         )
     )
 
-    story.append(p("2. Estado por buzón", H2))
-    if not boxes:
+    story.append(p("2. Estado por área", H2))
+    if not alerts:
         story.append(p("Todavía no hay correos analizados.", BODY))
     else:
-        per: dict[str, Counter] = {b: Counter() for b in boxes}
+        per: dict[str, Counter] = {}
+        boxes_of: dict[str, set] = {}
         for a in alerts:
-            c = per[a.mailbox_id]
+            area = a.department or "Sin área"
+            c = per.setdefault(area, Counter())
+            boxes_of.setdefault(area, set()).add(a.mailbox_id)
             c["total"] += 1
             c[a.risk.value] += 1
             c["quarantined"] += a.status is Status.quarantined
             c["pending"] += a.status is Status.pending_approval
-        ordered = sorted(
-            boxes, key=lambda b: (-per[b]["pending"], -per[b]["high"], boxes[b])
-        )
+        ordered = sorted(per, key=lambda d: (-per[d]["pending"], -per[d]["high"], d))
         rows = [
             [
                 p(h, CELLH if i == 0 else CELLHR)
                 for i, h in enumerate(
                     (
-                        "Buzón",
+                        "Área",
+                        "Buzones",
                         "Correos",
                         "Alto",
                         "Medio",
@@ -569,25 +601,21 @@ def build_org_pdf(
                 )
             ]
         ]
-        for b in ordered[:MAX_MAILBOXES]:
-            c = per[b]
+        for d in ordered[:MAX_MAILBOXES]:
+            c = per[d]
             rows.append(
-                [p(boxes[b], CELL)]
+                [p(d, CELL), _count_cell(len(boxes_of[d]), False)]
                 + [
                     _count_cell(c[k], k in ("high", "pending"))
                     for k in ("total", "high", "medium", "quarantined", "pending")
                 ]
             )
         story.append(
-            _table(rows, [w * 0.34, w * 0.1, w * 0.1, w * 0.1, w * 0.18, w * 0.18])
-        )
-        if len(ordered) > MAX_MAILBOXES:
-            story.append(
-                p(
-                    f"Se muestran los {MAX_MAILBOXES} buzones con más urgencia de {len(ordered)}.",
-                    SMALL,
-                )
+            _table(
+                rows,
+                [w * 0.26, w * 0.1, w * 0.1, w * 0.09, w * 0.09, w * 0.16, w * 0.2],
             )
+        )
 
     story.append(p("3. Campañas detectadas", H2))
     if not campaigns:
@@ -635,7 +663,7 @@ def build_org_pdf(
         rows = [
             [
                 p(h, CELLH)
-                for h in ("Fecha", "Persona", "Buzón / dominio", "Decisión", "Motivo")
+                for h in ("Fecha", "Persona", "Área · buzón / dominio", "Decisión", "Motivo")
             ]
         ]
         for at, by, a, x in decisions[:MAX_DECISIONS]:
@@ -643,7 +671,10 @@ def build_org_pdf(
                 [
                     p(_when(at), CELL),
                     p(by, CELL),
-                    p(f"{a.mailbox_label or 'buzón'} / {a.sender_domain}", CELL),
+                    p(
+                        f"{a.department} · {a.mailbox_label or 'buzón'} / {a.sender_domain}",
+                        CELL,
+                    ),
                     p(DECISION_TEXT.get(x.type, x.type), CELL),
                     p(_reason(x), CELL),
                 ]

@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Conectar tu correo a Atalaya</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preload" as="font" type="font/woff2" href="/static/fonts/inter-latin-400-normal.woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -34,13 +35,15 @@
       <h3>Qué verá la persona administradora</h3>
       <ul class="puntos">
         <li>De qué dominio vino cada correo sospechoso, a qué hora llegó y <strong>por qué parece sospechoso</strong>.</li>
-        <li>No ve tus contraseñas. No ve el contenido completo de tus correos.</li>
+        <li>También verá datos técnicos de las cabeceras del correo sospechoso: si pasó las verificaciones SPF, DKIM y DMARC, la IP desde la que salió, el dominio de respuesta, el dominio de los enlaces (sin ruta) y una versión saneada de algunas cabeceras, sin direcciones de correo completas.</li>
+        <li>El área de la organización a la que te asignan (por ejemplo, Finanzas), para agrupar los avisos por área.</li>
+        <li>No ve tus contraseñas. No ve el asunto ni el contenido de tus correos.</li>
       </ul>
 
       <h3 class="no">Qué NO hace</h3>
       <ul class="puntos">
         <li><strong>No borra ni envía correos.</strong></li>
-        <li><strong>No guarda</strong> el contenido de tus correos ni sus adjuntos.</li>
+        <li><strong>No guarda</strong> el asunto, el contenido de tus correos ni sus adjuntos. Solo guarda el veredicto, las señales, un identificador, el estado y los datos técnicos de cabeceras descritos arriba.</li>
         <li><strong>No te pide tu contraseña.</strong> La autorización la das directamente con Google.</li>
       </ul>
 

@@ -23,6 +23,7 @@ from fastapi.responses import RedirectResponse
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 
+from app import departments
 from app.admin import AdminAuth, set_session_cookie
 from app.identity import is_safe_email, normalize_email
 from app.providers.base import MailProvider
@@ -117,6 +118,7 @@ def build_router(ctx: AuthContext) -> APIRouter:
         return {
             "valid": valid,
             "label": row["label"] if valid else None,
+            "department": row["department"] if valid else None,
             "org": ctx.org_name,
             "mode": ctx.mode,
         }
@@ -299,12 +301,23 @@ def build_router(ctx: AuthContext) -> APIRouter:
                     ),
                     email,
                 )
+            area = departments.DEFAULT
+            if invite_id:
+                area = next(
+                    (
+                        i["department"]
+                        for i in registry.list_invites()
+                        if i["id"] == invite_id
+                    ),
+                    departments.DEFAULT,
+                )
             mailbox_id = registry.add_mailbox(
                 label,
                 email,
                 "gmail",
                 invite_id,
                 consent=bool(invite_id),
+                department=area,
                 token={"token": creds.token, "refresh_token": creds.refresh_token},
             )
             if invite_id and not registry.consume_invite(invite_id, mailbox_id):
@@ -319,7 +332,9 @@ def build_router(ctx: AuthContext) -> APIRouter:
                     if mid == mailbox_id and hasattr(prov, "reset_cache"):
                         prov.reset_cache()
             elif ctx.make_provider:
-                store.add_provider(mailbox_id, label, ctx.make_provider(mailbox_id))
+                store.add_provider(
+                    mailbox_id, label, ctx.make_provider(mailbox_id), area
+                )
             store.poll()
             response = RedirectResponse("/connected?result=ok" if invite_id else "/")
             response.delete_cookie(STATE_COOKIE)
@@ -338,12 +353,17 @@ def build_router(ctx: AuthContext) -> APIRouter:
             slug = "nuevo-" + secrets.token_hex(2)
             provider = new_demo_employee(row["label"], slug)
             mailbox_id = registry.add_mailbox(
-                row["label"], provider.account_name(), "demo", row["id"], consent=True
+                row["label"],
+                provider.account_name(),
+                "demo",
+                row["id"],
+                consent=True,
+                department=row["department"],
             )
             if not registry.consume_invite(row["id"], mailbox_id):
                 registry.delete_mailbox(mailbox_id, "sistema")
                 raise HTTPException(status_code=410, detail=INVALID_INVITE)
-            store.add_provider(mailbox_id, row["label"], provider)
+            store.add_provider(mailbox_id, row["label"], provider, row["department"])
             store.poll()
             return RedirectResponse("/connected?result=ok")
 

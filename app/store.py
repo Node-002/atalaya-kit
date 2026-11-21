@@ -9,7 +9,8 @@ import threading
 from datetime import UTC, datetime
 from typing import Protocol
 
-from app import analyzers, campaigns, decision
+from app import analyzers, campaigns, decision, departments
+from app.ficha import build_ficha
 from app.llm import Explainer, LLMVerdict, semantic_signals
 from app.models import ActionRecord, Alert, Message, Risk, Signal, Status
 from app.providers.base import MailProvider
@@ -70,6 +71,7 @@ class AlertStore:
         self._providers: dict[
             str, tuple[str, MailProvider]
         ] = {}  # id -> (etiqueta, proveedor)
+        self._departments: dict[str, str] = {}  # id de buzon -> area
         self._alerts: dict[str, Alert] = {}
         self._refs: dict[
             str, tuple[str, str]
@@ -83,13 +85,33 @@ class AlertStore:
             self.add_provider(DEFAULT_MAILBOX, "", provider)
 
     # --- Buzones -----------------------------------------------------------------------
-    def add_provider(self, mailbox_id: str, label: str, provider: MailProvider) -> None:
+    def add_provider(
+        self,
+        mailbox_id: str,
+        label: str,
+        provider: MailProvider,
+        department: str = departments.DEFAULT,
+    ) -> None:
         with self._lock:
             self._providers[mailbox_id] = (label, provider)
+            self._departments[mailbox_id] = departments.clean(department)
+
+    def department_of(self, mailbox_id: str) -> str:
+        return self._departments.get(mailbox_id, departments.DEFAULT)
+
+    def set_department(self, mailbox_id: str, department: str) -> None:
+        """Cambia el area de un buzon y de todas sus alertas (la validacion la hace quien llama)."""
+        with self._lock:
+            self._departments[mailbox_id] = departments.clean(department)
+            for alert_id, (mid, _) in self._refs.items():
+                if mid == mailbox_id:
+                    self._alerts[alert_id].department = self._departments[mailbox_id]
+                    self._persist(alert_id)
 
     def remove_provider(self, mailbox_id: str) -> None:
         with self._lock:
             self._providers.pop(mailbox_id, None)
+            self._departments.pop(mailbox_id, None)
             self._last_poll.pop(mailbox_id, None)
             for alert_id in [a for a, (m, _) in self._refs.items() if m == mailbox_id]:
                 self._alerts.pop(alert_id, None)
@@ -137,7 +159,9 @@ class AlertStore:
             for alert_id, mailbox_id, ref, data in self._repo.load_alerts():
                 if mailbox_id not in self._providers:
                     continue
-                self._alerts[alert_id] = Alert.model_validate(data)
+                loaded_alert = Alert.model_validate(data)
+                loaded_alert.department = self.department_of(mailbox_id)
+                self._alerts[alert_id] = loaded_alert
                 self._refs[alert_id] = (mailbox_id, ref)
                 loaded += 1
         return loaded
@@ -198,6 +222,8 @@ class AlertStore:
                 sender_domain=domain,
                 sender_key=sender_key,
                 topic_key=topic_key,
+                department=self.department_of(mailbox_id),
+                ficha=build_ficha(msg, signals),
                 risk=risk,
                 signals=signals,
                 explanation=verdict.explanation

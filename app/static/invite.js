@@ -16,7 +16,8 @@ async function init() {
   }
   document.getElementById("presentacion").textContent =
     "Te invitaron a conectar tu correo (" + info.label + ") para protegerlo contra phishing. " +
-    "Quien administra la seguridad de " + info.org + " verá los avisos de seguridad de ese correo.";
+    "Quien administra la seguridad de " + info.org + " verá los avisos de seguridad de ese correo." +
+    (info.department && info.department !== "Sin área" ? " Tu administración te asignó al área " + info.department + "." : "");
   consent.hidden = false;
   if (info.mode === "demo") document.getElementById("banner-demo").hidden = false;
 

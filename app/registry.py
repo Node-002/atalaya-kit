@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 
 from cryptography.fernet import Fernet, InvalidToken
 
+from app import departments
 from app.db import Database
 
 INVITE_TTL = timedelta(hours=48)
@@ -89,7 +90,11 @@ class Registry:
 
     # --- Invitaciones --------------------------------------------------------------
     def create_invite(
-        self, label: str, actor: str, ttl: timedelta = INVITE_TTL
+        self,
+        label: str,
+        actor: str,
+        ttl: timedelta = INVITE_TTL,
+        department: str = departments.DEFAULT,
     ) -> tuple[str, str]:
         """Devuelve (id, token). El token no se puede recuperar despues."""
         label = label.strip()[:LABEL_MAX]
@@ -99,8 +104,15 @@ class Registry:
         invite_id = secrets.token_hex(8)
         now = _now()
         self.db.execute(
-            "INSERT INTO invites (id, token_hash, label, created_at, expires_at) VALUES (?, ?, ?, ?, ?)",
-            (invite_id, _hash(token), label, now.isoformat(), (now + ttl).isoformat()),
+            "INSERT INTO invites (id, token_hash, label, created_at, expires_at, department) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                invite_id,
+                _hash(token),
+                label,
+                now.isoformat(),
+                (now + ttl).isoformat(),
+                departments.clean(department),
+            ),
         )
         self.audit(actor, "invite_created", label)
         return invite_id, token
@@ -161,6 +173,7 @@ class Registry:
         consent: bool = False,
         token: dict | None = None,
         mailbox_id: str | None = None,
+        department: str = departments.DEFAULT,
     ) -> str:
         """Crea el buzon, o actualiza el token si ese correo ya estaba (reconexion)."""
         existing = self.db.query("SELECT id FROM mailboxes WHERE email = ?", (email,))
@@ -173,8 +186,8 @@ class Registry:
         mailbox_id = mailbox_id or "mb_" + secrets.token_hex(6)
         now = _now().isoformat()
         self.db.execute(
-            "INSERT INTO mailboxes (id, label, email, kind, token_enc, created_at, consent_at, invite_id) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO mailboxes (id, label, email, kind, token_enc, created_at, consent_at, invite_id, department) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 mailbox_id,
                 label.strip()[:LABEL_MAX],
@@ -184,18 +197,30 @@ class Registry:
                 now,
                 now if consent else None,
                 invite_id,
+                departments.clean(department),
             ),
         )
         self.audit("sistema", "mailbox_connected", email)
         return mailbox_id
 
     def list_mailboxes(self, kind: str | None = None) -> list[dict]:
-        sql = "SELECT id, label, email, kind, created_at, consent_at FROM mailboxes"
+        sql = "SELECT id, label, email, kind, created_at, consent_at, department FROM mailboxes"
         rows = self.db.query(
             sql + (" WHERE kind = ?" if kind else "") + " ORDER BY created_at",
             (kind,) if kind else (),
         )
         return [dict(r) for r in rows]
+
+    def set_department(self, mailbox_id: str, department: str, actor: str) -> bool:
+        """Cambia el area de un buzon (el valor ya debe estar validado). Queda en la auditoria."""
+        if not departments.is_valid(department):
+            raise ValueError("Area no permitida.")
+        changed = self.db.execute(
+            "UPDATE mailboxes SET department = ? WHERE id = ?", (department, mailbox_id)
+        )
+        if changed:
+            self.audit(actor, "mailbox_department_changed", f"{mailbox_id} -> {department}")
+        return bool(changed)
 
     def find_mailbox_by_email(self, email: str) -> dict | None:
         rows = self.db.query(
@@ -206,7 +231,7 @@ class Registry:
 
     def get_mailbox(self, mailbox_id: str) -> dict | None:
         rows = self.db.query(
-            "SELECT id, label, email, kind, created_at, consent_at FROM mailboxes WHERE id = ?",
+            "SELECT id, label, email, kind, created_at, consent_at, department FROM mailboxes WHERE id = ?",
             (mailbox_id,),
         )
         return dict(rows[0]) if rows else None

@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS mailboxes (
     token_enc   BLOB,
     created_at  TEXT NOT NULL,
     consent_at  TEXT,
-    invite_id   TEXT
+    invite_id   TEXT,
+    department  TEXT NOT NULL DEFAULT 'Sin área'
 );
 CREATE TABLE IF NOT EXISTS invites (
     id          TEXT PRIMARY KEY,
@@ -26,7 +27,8 @@ CREATE TABLE IF NOT EXISTS invites (
     expires_at  TEXT NOT NULL,
     used_at     TEXT,
     revoked_at  TEXT,
-    mailbox_id  TEXT
+    mailbox_id  TEXT,
+    department  TEXT NOT NULL DEFAULT 'Sin área'
 );
 CREATE TABLE IF NOT EXISTS login_limits (
     client        TEXT PRIMARY KEY,
@@ -68,7 +70,17 @@ class Database:
         self._lock = threading.Lock()
         with self._lock:
             self._conn.executescript(SCHEMA)
+            self._migrate()
             self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Bases creadas antes del area: se agrega la columna con su valor por defecto."""
+        for table in ("mailboxes", "invites"):
+            cols = {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}
+            if "department" not in cols:
+                self._conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN department TEXT NOT NULL DEFAULT 'Sin área'"
+                )
 
     def execute(self, sql: str, params: tuple = ()) -> int:
         """Ejecuta una escritura y devuelve las filas afectadas."""
