@@ -82,6 +82,8 @@ def test_security_headers_and_hsts_only_over_https(monkeypatch):
     r = TestClient(create_app()).get("/health")
     assert r.headers["strict-transport-security"].startswith("max-age=")
     assert r.headers["x-content-type-options"] == "nosniff"
+    assert "camera=()" in r.headers["permissions-policy"]
+    assert r.headers["cross-origin-opener-policy"] == "same-origin"
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
     monkeypatch.setenv("ATALAYA_BASE_URL", "http://localhost:8000")
     assert (
