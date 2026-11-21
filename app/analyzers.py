@@ -1,7 +1,8 @@
 """Reglas de analisis (version minima del viernes). Los hechos los calcula el codigo,
 la IA solo redactara la explicacion mas adelante.
 
-Pendiente: verificar con nombres reales los dominios oficiales de la lista de marcas.
+Los dominios oficiales de cada marca se verificaron con fuentes publicas (ver
+docs/VERIFICACION_MARCAS.md).
 """
 
 import re
@@ -10,9 +11,35 @@ from email.utils import parseaddr
 from app import lookalike
 from app.models import Message, Signal
 
-_GOOGLE = {"google.com", "gmail.com", "googlemail.com", "google.com.pa", "google.co.cr"}
+
+def _tlds(prefix: str, suffixes: str, sep: str = ".") -> set[str]:
+    """prefix + cada sufijo ('google' + 'de' -> 'google.de'; con sep='-': 'paypal-mktg.com')."""
+    return {f"{prefix}{sep}{s}" for s in suffixes.split()}
+
+
+# Dominios oficiales verificados el 21 nov 2026. Fuentes y dominios dejados fuera a
+# proposito (alojamiento de terceros, sin confirmar): docs/VERIFICACION_MARCAS.md.
+# Google: lista publica de Google https://www.google.com/supported_domains
+_GOOGLE = {"google.com", "gmail.com", "googlemail.com", "google-analytics.com"} | _tlds(
+    "google",
+    """
+    ad ae al am as at az ba be bf bg bi bj bs bt by ca cat cd cf cg ch ci cl cm cn
+    co.ao co.bw co.ck co.cr co.id co.il co.in co.jp co.ke co.kr co.ls co.ma co.mz
+    co.nz co.th co.tz co.ug co.uk co.uz co.ve co.vi co.za co.zm co.zw com.af com.ag
+    com.ar com.au com.bd com.bh com.bn com.bo com.br com.bz com.co com.cu com.cy
+    com.do com.ec com.eg com.et com.fj com.gh com.gi com.gt com.hk com.jm com.kh
+    com.kw com.lb com.ly com.mm com.mt com.mx com.my com.na com.ng com.ni com.np
+    com.om com.pa com.pe com.pg com.ph com.pk com.pr com.py com.qa com.sa com.sb
+    com.sg com.sl com.sv com.tj com.tr com.tw com.ua com.uy com.vc com.vn cv cz de dj
+    dk dm dz ee es fi fm fr ga ge gg gl gm gr gy hn hr ht hu ie im iq is it je jo kg
+    ki kz la li lk lt lu lv md me mg mk ml mn mu mv mw ne nl no nr nu pl pn ps pt ro
+    rs ru rw sc se sh si sk sm sn so sr st td tg tl tm tn to tt vu ws
+    """,
+)
 _MICROSOFT = {
     "microsoft.com",
+    "microsoft365.com",
+    "microsoftstore.com",
     "microsoftonline.com",
     "outlook.com",
     "office.com",
@@ -20,41 +47,112 @@ _MICROSOFT = {
     "live.com",
     "hotmail.com",
 }
-_APPLE = {"apple.com", "icloud.com"}
-_AMAZON = {"amazon.com", "amazon.es", "amazon.com.mx", "amazon.co.uk", "amazon.de"}
-_FACEBOOK = {"facebook.com", "facebookmail.com", "fb.com", "meta.com", "messenger.com"}
-_DAVIVIENDA = {"davivienda.com", "davivienda.com.pa", "davivienda.cr"}
+_APPLE = {
+    "apple.com",
+    "apple.com.cn",
+    "apple.co",
+    "apple.news",
+    "icloud.com",
+    "icloud.com.cn",
+}
+_AMAZON = _tlds(
+    "amazon",
+    "com es com.mx co.uk de fr it ca com.br co.jp jp in co.in com.au nl se pl sg ae sa com.tr com.be eg",
+)
+_FACEBOOK = {
+    "facebook.com",
+    "facebook.net",
+    "facebookmail.com",
+    "fb.com",
+    "meta.com",
+    "messenger.com",
+}
+_WHATSAPP = {"whatsapp.com", "whatsapp.net", "wa.me"}
+_DAVIVIENDA = {
+    "davivienda.com",
+    "davivienda.com.pa",
+    "davivienda.cr",
+    "davivienda.hn",
+    "davivienda.com.hn",
+    "davivienda.com.sv",
+}
 _CW = {"cwpanama.com", "cwpanama.net"}
+_BANCOGENERAL = {
+    "bancogeneral.com",
+    "bgeneral.com",
+    "banco-general.com",
+    "bgeneral.fi.cr",
+    "bgeneralcr.com",
+}
+_PAYPAL = (
+    {"paypal.com", "paypal.me"}
+    | _tlds(
+        "paypal",
+        "at be biz ca ch cl co.id co.il co.in co.nz co.th co.uk co.za com com.ar com.au com.br com.cn com.hk com.mx com.pe com.sa com.sg com.tr com.tw com.ve de dk es eu fi fr ie in it jp lu me nl no ph pl pt se vn ai",
+    )
+    | _tlds(
+        "paypal",
+        "australia.com.au business.co.uk business.com.au businesscenter.com communications.com corp.com danmark.dk donations.co.uk donations.com experience.com gifts.com globalshops.com information.com knowledge.com latam.com marketing.ca marketing.co.uk media.com mena.com mktg.com nakit.com norge.no optimizer.com partners.com passport.com prepagata.com promo.es support.com sverige.se turkiye.com workplace.com",
+        sep="-",
+    )
+)
+_DHL = _tlds(
+    "dhl",
+    """
+    ae af al at ba be bg ch cl co.bw co.il co.in co.ir co.jp co.ke co.ls co.mu co.mw
+    co.nz co.rs co.tz co.ug co.uk co.za co.zm co.zw com com.af com.au com.bb com.bd
+    com.bh com.bm com.bn com.bs com.co com.cy com.ge com.gh com.jm com.kh com.kw
+    com.la com.lb com.lk com.mk com.mt com.my com.na com.ng com.np com.om com.pe
+    com.pg com.pk com.qa com.sa com.sg com.tr com.tt com.ua cz de dk ee es fi fr gr hr
+    hu ie in is it jo kz lt lu lv mk nl no pt ro se si sk vg
+    """,
+) | {"dhl-usa.com", "dhlegypt.com"}
+_SCOTIABANK = {
+    "scotiabank.com",
+    "scotiabank.ca",
+    "scotiabank.com.pa",
+    "scotiabankfc.com",
+}
+_DOCUSIGN = _tlds(
+    "docusign", "com net ca co.uk com.au com.br com.es de fr in it jp mx nl sg"
+)
 
 # Marca (palabra que aparece en el dominio) -> dominios legitimos. Los subdominios de
-# un dominio oficial tambien son oficiales. VERIFICAR nombres reales antes de produccion.
+# un dominio oficial tambien son oficiales. Verificados (ver arriba); lo dudoso quedo fuera.
 # Una misma empresa puede tener varias palabras (google y gmail comparten dominios).
 BRANDS: dict[str, set[str]] = {
-    "bancogeneral": {"bancogeneral.com"},
+    "bancogeneral": _BANCOGENERAL,
+    "bgeneral": _BANCOGENERAL,
     "bncr": {"bncr.fi.cr"},
-    "bac": {"baccredomatic.com"},
-    "banistmo": {"banistmo.com"},
+    "bac": {"baccredomatic.com", "baccredomatic.cr", "baccredomatic.sv", "bac.net"},
+    "banistmo": {"banistmo.com", "banistmo.com.pa"},
     "banconal": {"banconal.com.pa"},
     "davivienda": _DAVIVIENDA,
     "yappy": {"yappy.com.pa"},
     "tigo": {"tigo.com.pa", "tigo.com", "tigo.cr"},
     "cwpanama": _CW,
+    "bancolombia": {"bancolombia.com"},
+    "scotiabank": _SCOTIABANK,
     "google": _GOOGLE,
     "gmail": _GOOGLE,
     "microsoft": _MICROSOFT,
     "outlook": _MICROSOFT,
     "office365": _MICROSOFT,
-    "netflix": {"netflix.com"},
+    "netflix": {"netflix.com", "netflix.ca"},
     "dropbox": {"dropbox.com", "dropboxmail.com"},
-    "paypal": {"paypal.com", "paypal.me"},
+    "paypal": _PAYPAL,
     "apple": _APPLE,
     "icloud": _APPLE,
     "amazon": _AMAZON,
     "facebook": _FACEBOOK,
-    "dhl": {"dhl.com", "dhl.de", "dhl.es", "dhl.co.uk"},
+    "instagram": {"instagram.com"},
+    "whatsapp": _WHATSAPP,
+    "linkedin": {"linkedin.com"},
+    "docusign": _DOCUSIGN,
+    "dhl": _DHL,
 }
 
-# Nombres con los que una marca se muestra a la gente (VERIFICAR). No se usa "meta"
+# Nombres con los que una marca se muestra a la gente. No se usa "meta"
 # sola porque en espanol es una palabra comun.
 BRAND_NAMES: dict[str, tuple[str, ...]] = {
     "bancogeneral": ("banco general", "bancogeneral"),
@@ -78,6 +176,12 @@ BRAND_NAMES: dict[str, tuple[str, ...]] = {
     "icloud": ("icloud",),
     "amazon": ("amazon",),
     "facebook": ("facebook", "meta platforms"),
+    "bancolombia": ("bancolombia",),
+    "scotiabank": ("scotiabank",),
+    "instagram": ("instagram",),
+    "whatsapp": ("whatsapp",),
+    "linkedin": ("linkedin",),
+    "docusign": ("docusign",),
     "dhl": ("dhl",),
 }
 
