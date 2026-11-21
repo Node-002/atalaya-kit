@@ -219,3 +219,9 @@ h3.no + .puntos li::before { content: "\2715"; color: var(--high); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* --- Muchos buzones: busqueda y filtro visible --- */
+input[type="search"] { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #0d1117; color: var(--text); flex: 1 1 200px; max-width: 360px; }
+.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
+.filtro-activo { margin: 8px 0; padding: 8px 12px; border-radius: 8px; background: #12202f; border: 1px solid #1f4068; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#resumen-buscar { margin: 12px 0 0; }

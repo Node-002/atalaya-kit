@@ -9,6 +9,7 @@ Modos (variable ATALAYA_MODE):
 import asyncio
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -373,12 +374,27 @@ def create_app(
         return {"alerts": len(store.list())}
 
     # --- Buzones y cobertura ---------------------------------------------------------------
+    status_cache: dict[str, tuple[float, object]] = {}
+
+    def _status_of(mailbox_id: str, prov: MailProvider):
+        """Con Gmail, comprobar la conexion es una llamada de red por buzon: con 200 buzones
+        se guarda 60 s para que el panel siga rapido. La demo consulta siempre."""
+        if mode != "gmail":
+            return prov.connection_status()
+        now = time.monotonic()
+        hit = status_cache.get(mailbox_id)
+        if hit and now - hit[0] < 60:
+            return hit[1]
+        status = prov.connection_status()
+        status_cache[mailbox_id] = (now, status)
+        return status
+
     @app.get("/api/coverage", response_model=list[Coverage])
     def coverage() -> list[Coverage]:
         rows = {m["id"]: m for m in registry.list_mailboxes()}
         result = []
         for mailbox_id, label, prov in store.providers():
-            status = prov.connection_status()  # primero: fija el nombre de la cuenta
+            status = _status_of(mailbox_id, prov)  # primero: fija el nombre de la cuenta
             email = rows.get(mailbox_id, {}).get("email") or prov.account_name()
             result.append(
                 Coverage(
@@ -401,6 +417,7 @@ def create_app(
             revoke_google_token(token.get("refresh_token") or token.get("token"))
         registry.delete_mailbox(mailbox_id, actor_of(request))
         store.remove_provider(mailbox_id)
+        status_cache.pop(mailbox_id, None)
         return {"status": "disconnected"}
 
     # --- Invitaciones (solo administracion) --------------------------------------------------
