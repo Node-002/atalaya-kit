@@ -76,7 +76,7 @@ Asistente de instalacion de Atalaya 1.0.0
 Listo.
 ```
 
-> **Honest status.** The assistant was tested with automated tests and a **fake** `docker` (orchestration, validations, no secret reaching the screen or process arguments, permissions, backup copy). It has **not been run against real Docker or with a Google Workspace organization**; the CI `kit` job exercises it with real Docker on push. Design decisions: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md) (in Spanish).
+> **Honest status.** The assistant was tested with automated tests and a **fake** `docker` (orchestration, validations, no secret reaching the screen or process arguments, permissions, backup copy). The kit did start with real Docker Desktop on Windows (container "healthy", with test keys), but it has **not been run with a real Google Workspace organization**; the CI `kit` job exercises it with real Docker on push. Design decisions: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md) (in Spanish).
 
 ### Option B: manual
 

@@ -64,7 +64,7 @@
 - **Notas:** decir que el kit se construye y se prueba en el CI, pero que los pasos de Google Cloud **no se verificaron con una organización Workspace real**. Detalle en [ADR 0012](adr/0012-kit-autoalojado-en-lugar-de-servicio-alojado.md) y [INSTALACION.md](INSTALACION.md).
 
 ## 9. Modelo, competencia y hoja de ruta (hipótesis)
-- Licencia del kit por organización (hipótesis; **precio sin definir**); código AGPL-3.0 y licencia comercial para productos cerrados; soporte e instalación como servicio.
+- Licencia del kit por organización (hipótesis; **precio sin definir**); código AGPL-3.0 y licencia comercial para productos cerrados (borrador, sin revisión legal); soporte e instalación como servicio.
 - Costos: IA por correo (sin medir hasta probar con saldo), soporte, mantenimiento. Alojamiento: lo pone cada cliente.
 - Competencia: Google/Microsoft incluidos, pasarelas y seguridad por API (en inglés, pensadas para equipos de TI). Diferencia: español, explicación visible, privacidad por diseño, instalación en la propia infraestructura. No «detecta más».
 - Hoja de ruta: **hoy** kit para Gmail/Google Workspace → **después** Microsoft 365 con el mismo modelo → **más adelante** servicio alojado, cuando Google verifique la aplicación.
@@ -83,6 +83,10 @@
 - «Atalaya: el agente que vigila el correo de tu organización, y se instala en tu organización.»
 - **Mostrar:** enlaces cortos/QR. Incluir el enlace al repositorio solo cuando esté público.
 - **Notas:** probar cada enlace en ventana privada antes ([CHECKLIST_ENTREGA.md](CHECKLIST_ENTREGA.md)).
+
+## Anexos (después del cierre; solo si preguntan)
+- **Anexo A. Cómo verifica los correos:** Python 3.12 y FastAPI; reglas de código (SPF/DKIM/DMARC leídos de cabeceras, 28 marcas con dominios verificados en fuentes públicas el 21 nov 2026, errores de escritura, otros alfabetos, nombre visible de marca con dominio ajeno, acortadores —6 conocidos— y el truco de la arroba, urgencia, instrucciones a una IA); umbrales 30 (medio) y 60 (alto), visibles de solo lectura. La IA (Claude, de Anthropic) solo redacta la explicación y viene apagada.
+- **Anexo B. Por qué no usa reputación externa:** consultar Safe Browsing, VirusTotal o Kaspersky obliga a enviar los enlaces de cada correo a un tercero y revela quién recibe qué; cada servicio tiene sus condiciones (claves, límites, precio). **Limitación conocida:** un dominio malicioso que no imite a una marca y no esté acortado puede pasar sin señal de enlace. Siguiente paso (hipótesis): consulta opcional, apagada por defecto, solo del dominio, con la clave de cada organización.
 
 ---
 ## Reserva (no se muestra salvo pregunta)

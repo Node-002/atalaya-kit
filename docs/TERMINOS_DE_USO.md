@@ -13,7 +13,7 @@ Una herramienta de apoyo que analiza los correos de los buzones conectados, expl
 - La explicación mostrada en la demo es simulada.
 
 ## 3. Uso real (hoy: solo pruebas)
-- Hoy Atalaya solo se ejecuta en el equipo de la persona autora, con **usuarios de prueba de Google** (máximo 100, hasta que Google verifique la aplicación). No se ofrece como servicio público.
+- Hoy Atalaya se ofrece como **kit que cada organización instala en su propio servidor**, con su propia aplicación de Google y sus propias claves. El equipo Atalaya **no recibe** sus correos, tokens ni claves. No se ofrece como servicio alojado hasta que Google verifique la aplicación (mientras tanto, la cuenta de pruebas del proyecto admite como máximo 100 usuarios de prueba).
 - Solo puedes conectar un buzón **que sea tuyo o sobre el que tengas autorización**, y solo tras aceptar la pantalla de consentimiento.
 - La persona administradora es responsable de avisar a las personas cuyos buzones conecta y de cumplir la ley que le aplique.
 
