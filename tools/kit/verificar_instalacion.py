@@ -240,6 +240,17 @@ def check_client_json(path: str, base: str) -> list[tuple[str, str]]:
 
 def check_health(base: str, timeout: float = 8.0) -> list[tuple[str, str]]:
     url = base.rstrip("/") + "/health"
+    if not url.lower().startswith(("http://", "https://")):
+        # urllib también abre file:// y otros esquemas: solo se aceptan direcciones web
+        return [
+            (
+                FALLA,
+                t(
+                    "La dirección debe empezar por http:// o https://",
+                    "The address must start with http:// or https://",
+                ),
+            )
+        ]
     try:
         with urllib.request.urlopen(  # nosec B310
             url, timeout=timeout
