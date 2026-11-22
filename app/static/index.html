@@ -11,8 +11,33 @@
   <link rel="preload" as="font" type="font/woff2" href="/static/fonts/inter-latin-500-normal.woff2" crossorigin>
   <link rel="preload" as="font" type="font/woff2" href="/static/fonts/jetbrains-mono-latin-500-normal.woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/intro.js"></script>
 </head>
 <body data-vista="panel">
+  <!-- Intro de inicio (~1,7 s, una vez por sesión; solo decorativa, sin botón y oculta a lectores de pantalla) -->
+  <div class="intro" aria-hidden="true">
+    <div class="intro-reticula"></div>
+    <div class="intro-marca">
+      <div class="intro-sello">
+        <svg class="intro-anillo intro-cw" viewBox="0 0 180 180" fill="none" focusable="false">
+          <circle cx="90" cy="90" r="84" stroke="rgba(255,255,255,0.09)" stroke-width="1" stroke-dasharray="5 5"/>
+          <path d="M90 6 A84 84 0 0 1 174 90" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M90 174 A84 84 0 0 1 6 90" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
+        </svg>
+        <svg class="intro-anillo intro-ccw" viewBox="0 0 148 148" fill="none" focusable="false">
+          <circle cx="74" cy="74" r="66" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+          <circle cx="74" cy="8" r="2.5" fill="#10b981"/>
+          <circle cx="74" cy="140" r="2.5" fill="#38bdf8"/>
+        </svg>
+        <div class="intro-torre">
+          <span class="intro-haz"></span>
+          <svg focusable="false"><use href="/static/icons/sprite.svg#i-torre"/></svg>
+        </div>
+      </div>
+      <svg class="intro-rotulo" focusable="false"><use href="/static/icons/sprite.svg#i-rotulo"/></svg>
+    </div>
+  </div>
+
   <a class="skip" href="#contenido">Saltar al contenido</a>
   <p id="mensaje" class="mensaje toast" role="status" aria-live="polite"></p>
 

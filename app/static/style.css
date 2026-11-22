@@ -559,5 +559,42 @@ body:not([data-vista="panel"]) .detalle { display: none; }
 .b-card .barra-puntaje > span { background: var(--medium); }
 .b-card .barra-puntaje > span.alta { background: var(--high); }
 
+/* --- Intro de inicio: ~1,7 s, una vez por sesión (intro.js añade «con-intro» a <html>) ---
+   Solo se pinta si la persona no pidió menos movimiento. Se quita sola (visibility) y no tiene botón. */
+.intro { display: none; }
+@keyframes intro-gira { to { transform: rotate(360deg); } }
+@keyframes intro-gira-inv { to { transform: rotate(-360deg); } }
+@keyframes intro-haz { 0% { top: 4%; opacity: 0; } 15%, 85% { opacity: 1; } 100% { top: 96%; opacity: 0; } }
+@keyframes intro-revela { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes intro-sale { to { opacity: 0; visibility: hidden; } }
+@media (prefers-reduced-motion: no-preference) {
+  html.con-intro .intro {
+    display: flex; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center;
+    background: var(--bg); animation: intro-sale .5s ease 1.7s forwards;
+  }
+  .intro-reticula {
+    position: absolute; inset: 0; opacity: .25; pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1px); background-size: 24px 24px;
+  }
+  .intro-marca { position: relative; display: flex; flex-direction: column; align-items: center; animation: intro-revela .55s cubic-bezier(.16, 1, .3, 1) both; }
+  .intro-sello { position: relative; width: 176px; height: 176px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+  .intro-anillo { position: absolute; }
+  .intro-cw { inset: 0; width: 100%; height: 100%; animation: intro-gira 8s linear infinite; }
+  .intro-ccw { inset: 14px; width: 148px; height: 148px; animation: intro-gira-inv 5.5s linear infinite; }
+  /* Resplandor suave detrás de la torre: la integra al fondo, sin recuadro */
+  .intro-sello::before {
+    content: ""; position: absolute; inset: 22px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, rgba(56, 189, 248, .16) 0%, rgba(56, 189, 248, .05) 55%, transparent 75%);
+  }
+  .intro-torre { position: relative; width: 96px; height: 112px; display: flex; align-items: center; justify-content: center; }
+  .intro-torre svg { width: 80px; height: 96px; color: var(--text); filter: drop-shadow(0 0 10px rgba(56, 189, 248, .25)); }
+  .intro-haz {
+    position: absolute; left: 4px; width: calc(100% - 8px); height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #38bdf8 25%, #f8fafc 50%, #38bdf8 75%, transparent 100%);
+    box-shadow: 0 0 18px 3px rgba(56, 189, 248, .7); animation: intro-haz 1.35s cubic-bezier(.4, 0, .2, 1) infinite;
+  }
+  .intro-rotulo { display: block; width: 200px; height: 25px; color: var(--text); }
+}
+
 /* Pestaña «Limpios» (correos sin señales): mismo verde que «Legítimos» */
 .filtro.limpio .n { color: var(--safe-text); }
