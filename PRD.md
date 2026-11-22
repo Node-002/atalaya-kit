@@ -1,5 +1,7 @@
 # PRD — Atalaya
 
+> **Actualización (22 nov 2026):** este documento recoge el alcance inicial (v0.1, 20 nov). El producto evolucionó a un **kit autoalojado**: cada organización lo instala en sus propios servidores y es responsable de su operación y de sus datos; el equipo Atalaya no aloja ni recibe correos. Varias cosas listadas abajo como «fuera de alcance» (campañas, roles, varios buzones) se construyeron después. Ver [README](README.md), [ADR 0012](docs/adr/0012-kit-autoalojado-en-lugar-de-servicio-alojado.md) y [docs/MVP_ALCANCE.md](docs/MVP_ALCANCE.md).
+
 > Estado: v0.1, viernes 20 nov 2026 (inicio del hackathon). Documento vivo. Detalle de alcance: `docs/MVP_ALCANCE.md`. Negocio y problema: `docs/NEGOCIO_Y_PROBLEMA.md`.
 
 ## 1. Problema

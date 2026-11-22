@@ -40,6 +40,23 @@ Gmail ──(consulta periódica, solo bandeja de entrada, últimos 7 días)─�
 ```
 **Privacidad:** no se guardan asunto, cuerpo ni adjuntos. Se guarda el veredicto, las señales, un identificador, el estado, el área de la organización del buzón (la asigna la administración; ADR 0011) y una lista blanca de metadatos técnicos de cabeceras (resultado de SPF/DKIM/DMARC, IP de origen, Return-Path con la parte local enmascarada, host de los enlaces neutralizado, dominio de Reply-To y un subconjunto saneado de cabeceras SMTP; máx. 2 KB por correo, sin direcciones completas; el país no se consulta; ver ADR 0010). Los tokens de Google se cifran (Fernet).
 
+## Quién se responsabiliza de qué
+Atalaya **no es un servicio que nosotros operemos**: es software que cada organización instala y ejecuta en **sus propios servidores**. Por eso:
+
+| Qué | Quién |
+|---|---|
+| Instalar, actualizar y operar el servidor | La **organización** que lo instala |
+| Guardar y proteger los datos (la base y las claves viven en su servidor) | La **organización** |
+| Decidir qué buzones conecta y avisar a las personas cuyo correo se vigila | La **organización** |
+| Cumplir la ley que le aplique (protección de datos, laboral, etc.) | La **organización** |
+| Alojar el servicio, recibir correos, tokens o claves de las organizaciones | **Nadie fuera de ella**: el equipo Atalaya no los recibe ni los custodia |
+| Soporte, disponibilidad, actualizaciones o resultados garantizados | **No se ofrecen**: el software se entrega «tal cual» |
+
+Está publicado bajo AGPL-3.0, cuyas secciones 15 y 16 excluyen garantías y limitan la responsabilidad por daños. Los [términos de uso](docs/TERMINOS_DE_USO.md) y la [política de privacidad](docs/POLITICA_PRIVACIDAD.md) son **borradores que no ha revisado una persona abogada**. Atalaya es una herramienta de apoyo, no una garantía de seguridad.
+
+## Trabajo previo al hackatón
+Antes del 20 de noviembre de 2026 solo existían ideas y documentación, sin código del producto ([docs/ESTADO_INICIAL.md](docs/ESTADO_INICIAL.md)). Todo el código se escribió del 20 al 22 de noviembre.
+
 ## Dos modos
 | Modo | Para qué | Cuentas reales |
 |---|---|---|

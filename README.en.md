@@ -19,5 +19,22 @@ Any organization with **Google Workspace** can install its own copy of Atalaya o
 - The optional AI explanation sends masked text to an external provider when enabled and has not been tested with a real paid account.
 - No guaranteed support. Pricing is an undefined hypothesis.
 
+## Who is responsible for what
+Atalaya is **not a service we run**: it is software that each organization installs and runs on **its own servers**. Therefore:
+
+| What | Who |
+|---|---|
+| Installing, updating and operating the server | The **organization** that installs it |
+| Storing and protecting the data (the database and keys live on its server) | The **organization** |
+| Deciding which mailboxes to connect and informing the people whose email is monitored | The **organization** |
+| Complying with the laws that apply to it (data protection, labor, etc.) | The **organization** |
+| Hosting the service, receiving organizations' email, tokens or keys | **Nobody outside it**: the Atalaya team neither receives nor holds them |
+| Support, availability, updates or guaranteed results | **Not offered**: the software is provided "as is" |
+
+It is released under AGPL-3.0, whose sections 15 and 16 disclaim warranties and limit liability for damages. The terms of use and privacy policy (in Spanish, in `docs/`) are **drafts not reviewed by a lawyer**. Atalaya is a support tool, not a security guarantee.
+
+## Work before the hackathon
+Before 20 November 2026 there were only ideas and documentation, no product code (`docs/ESTADO_INICIAL.md`). All the code was written on 20-22 November.
+
 ## License
 **GNU AGPL-3.0** ([LICENSE](LICENSE)) plus a **commercial license** for closed-product use, agreed with the team through this repository's GitHub profile.

@@ -2,7 +2,7 @@
 
 > ⚠️ **Borrador no revisado por una persona abogada.** Describe lo que hace el código del repositorio a fecha 21 nov 2026. No es asesoría legal ni cumple por sí sola ninguna ley (por ejemplo, la ley de protección de datos personales de Panamá o la de Costa Rica). Antes de usarlo con personas reales hay que revisarlo y completar los puntos marcados **[POR DEFINIR]**.
 
-**Responsable:** **[POR DEFINIR con revisión legal]**. En el kit autoalojado, los datos quedan en el servidor de la organización que lo instala, que decide qué buzones conecta; el equipo Atalaya (una persona) no los recibe. En la demo pública, el responsable es el equipo Atalaya y no hay datos reales. **Contacto:** [POR DEFINIR: correo de contacto].
+**Responsable de los datos:** en el kit autoalojado, **la organización que lo instala**: decide qué buzones conecta, guarda los datos en su propio servidor y responde por su tratamiento; el equipo Atalaya (una persona) no los recibe ni los custodia. En la demo pública, el equipo Atalaya es quien la opera y no hay datos reales. **[Confirmar con revisión legal]**. **Contacto:** [POR DEFINIR: correo de contacto].
 **Última actualización:** 21 nov 2026.
 
 ## 1. En resumen

@@ -15,7 +15,7 @@ Una herramienta de apoyo que analiza los correos de los buzones conectados, expl
 ## 3. Uso real (hoy: solo pruebas)
 - Hoy Atalaya se ofrece como **kit que cada organización instala en su propio servidor**, con su propia aplicación de Google y sus propias claves. El equipo Atalaya **no recibe** sus correos, tokens ni claves. No se ofrece como servicio alojado hasta que Google verifique la aplicación (mientras tanto, la cuenta de pruebas del proyecto admite como máximo 100 usuarios de prueba).
 - Solo puedes conectar un buzón **que sea tuyo o sobre el que tengas autorización**, y solo tras aceptar la pantalla de consentimiento.
-- La persona administradora es responsable de avisar a las personas cuyos buzones conecta y de cumplir la ley que le aplique.
+- La organización que instala Atalaya **es responsable de su instalación**: del servidor, de los datos, de avisar a las personas cuyos buzones conecta y de cumplir la ley que le aplique. El equipo Atalaya no aloja ni opera ninguna instalación, no tiene acceso a sus datos y no ofrece soporte ni garantías.
 
 ## 4. Lo que Atalaya hace y no hace con tu correo
 - **Sí:** lee correos nuevos de la bandeja de entrada, los analiza, pone etiquetas y, **solo con aprobación humana**, saca un correo de la bandeja (reversible).
