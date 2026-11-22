@@ -13,7 +13,7 @@
 | Video | Dos versiones generadas (voz Margarita 2:21, voz Roberto 2:43) en `video/`, fuera de git; falta elegir y subir |
 | Ticket al soporte de GitHub (purga de `refs/pull/*`) | **Sin respuesta**; las 7 referencias siguen en GitHub |
 | Historial de la rama actual en GitHub | **Contiene un dato sensible en 9 commits antiguos** (versiones tempranas de `docs/AUDITORIA_PUBLICACION.md`); la punta está limpia. Ver sección 2 |
-| Repositorio limpio de respaldo | Preparado en `C:\Hackaton-limpio` (sin remoto, **no publicado**): 0 coincidencias con las reglas reales, gitleaks limpio, mismo contenido final |
+| Repositorio limpio (plan B) | **Creado el 22 nov como `Node-002/atalaya-kit`, privado** (una sola rama `hackathon/mvp`, sin pull requests ni etiquetas viejas): 0 coincidencias con las reglas reales, gitleaks limpio y todos los commits con la identidad `noreply`. **Falta hacerlo público** tras comprobar el CI. El repositorio anterior (`Node-002/atalaya`) sigue privado: no se renombró para no afectar el despliegue de Render |
 | Respuestas de Dojo (sección 6) | Sin respuesta por escrito |
 
 ## 1. Decisión del repositorio (lo primero)
