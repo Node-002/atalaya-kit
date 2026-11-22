@@ -28,3 +28,6 @@ Decisiones concretas:
 ## Consecuencias
 - Un archivo más que mantener en sincronía con `app/kit_preflight.py` y `.env.kit.example` (la prueba de coherencia lo vigila en parte).
 - Reduce el riesgo de errores de configuración (`http` en producción, JSON incorrecto, `TRUST_PROXY` mal puesto) antes de arrancar.
+
+## Actualización (22 nov 2026)
+El kit arrancó después con Docker Desktop real en Windows (contenedor «healthy», con claves de prueba). Sigue **sin probarse** con una organización de Google Workspace ni con los pasos de Google Cloud.

@@ -4,13 +4,15 @@
 
 Atalaya revisa cada correo nuevo de los buzones de una organización pequeña (empresa, colegio, universidad), explica en español **por qué** desconfía de alguno y, **solo con la aprobación de una persona**, lo saca de la bandeja. Nunca borra ni envía correos.
 
+**El producto es un kit autoalojado:** cada organización lo instala en su propio servidor, con su propia aplicación de Google y sus propias claves. Atalaya no recibe sus correos, tokens ni claves, y no hay servicio central que los custodie.
+
 ## El problema
-El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlaces engañosos, suplantación de marcas). Las organizaciones pequeñas no tienen un equipo de seguridad que revise cada mensaje, y las soluciones que existen vienen de grandes proveedores. Las cifras públicas y sus límites están en [docs/EVIDENCIA_PUBLICA.md](docs/EVIDENCIA_PUBLICA.md).
+El correo es una de las puertas de entrada más comunes de los ataques (phishing, enlaces engañosos, suplantación de marcas). Las organizaciones pequeñas no tienen un equipo de seguridad que revise cada mensaje, y las soluciones que existen vienen de grandes proveedores. Las cifras públicas y sus límites están en [docs/EVIDENCIA_PUBLICA.md](docs/EVIDENCIA_PUBLICA.md).
 
 ## Qué hace hoy (verificado con pruebas)
 1. **Analiza cada correo nuevo con reglas calculadas por código**, no por IA:
    - autenticación del remitente (SPF, DKIM y DMARC, leídos de las cabeceras);
-   - dominios parecidos a una marca, letras de otros alfabetos (homógrafos) y errores de escritura de la marca (22 marcas);
+   - dominios parecidos a una marca, letras de otros alfabetos (homógrafos) y errores de escritura de la marca (28 marcas con dominios verificados en fuentes públicas, ver [docs/VERIFICACION_MARCAS.md](docs/VERIFICACION_MARCAS.md));
    - remitente que aparenta ser una marca pero escribe desde otro dominio;
    - «responder a» distinto del remitente, enlaces acortados, lenguaje de urgencia;
    - instrucciones ocultas dirigidas a una IA (intento de manipulación).
@@ -21,11 +23,12 @@ El correo es la puerta de entrada de la mayoría de los ataques (phishing, enlac
 6. **Invitaciones:** cada persona conecta su buzón con «Iniciar sesión con Google» y un enlace de un solo uso.
 
 ## Qué NO hace (límites honestos)
+- **El permiso de Google es más amplio que lo que usa el código.** Atalaya pide `gmail.modify` (leer y etiquetar). El código solo lista y lee mensajes, y crea y modifica etiquetas: no borra ni envía, pero ese permiso de Google técnicamente permitiría más. Quien lo instala puede revisarlo en `app/providers/`.
 - **No analiza adjuntos** ni consulta reputación de enlaces (Safe Browsing, VirusTotal): no está construido.
 - **No detecta fraudes sin señales técnicas** (por ejemplo, un «jefe» que pide una transferencia sin enlaces).
 - Solo Gmail; **Microsoft 365 no está construido**.
 - La explicación con IA real (Anthropic) está implementada pero **no se ha probado con saldo real**.
-- La medición de detección usa un corpus **sintético** que escribimos nosotros: 21 de 24 intentos detectados y 3 de 24 correos legítimos marcados de más ([docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md)). No es una medición con correos reales.
+- La medición de detección usa un corpus **sintético** que escribimos nosotros: 62 correos (30 intentos y 32 legítimos): 27 de 30 intentos detectados y 3 de 32 correos legítimos marcados de más; se reproduce con `python -m app.evaluate` ([docs/RESULTADOS_PRUEBAS.md](docs/RESULTADOS_PRUEBAS.md)). Parte de la mejora viene de casos escritos para las funciones nuevas: no es una medición con correos reales.
 - Para el servicio alojado, Google exigiría verificar la aplicación (mientras tanto, máximo 100 usuarios de prueba). Por eso el producto se entrega como kit autoalojado con aplicación «Interna» de cada organización (ver arriba); esa vía **no está verificada con una organización real**.
 
 ## Cómo funciona
@@ -41,16 +44,16 @@ Gmail ──(consulta periódica, solo bandeja de entrada, últimos 7 días)─�
 | Modo | Para qué | Cuentas reales |
 |---|---|---|
 | `demo` (por defecto) | Demostración pública con empleados simulados, sin inicio de sesión y base de datos en memoria | No |
-| `gmail` | Uso real en tu computadora, con inicio de sesión de administración con Google y usuarios de prueba | Sí (solo local) |
+| `gmail` | Uso real: kit autoalojado en tu equipo o en el servidor de tu organización, con inicio de sesión de administración con Google | Sí (solo en tu propia instalación; nunca en el despliegue público) |
 
 **El despliegue público es solo modo demo.** Ver [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
 
 ## Instalación para organizaciones (kit autoalojado)
 Cada organización con **Google Workspace** puede instalar su propia copia de Atalaya en su infraestructura, con su propia aplicación de Google marcada como «Interna» y sus propias claves; **nosotros nunca vemos sus correos, tokens ni claves**. El kit trae `docker-compose.yml` (etapa `kit` del `Dockerfile`), un `Caddyfile` de ejemplo con HTTPS automático, `.env.kit.example`, herramientas en `tools/kit/` (verificador, respaldo, restauración) y una guía paso a paso: [docs/INSTALACION.md](docs/INSTALACION.md) (incluye una evaluación en 15 minutos en `localhost`). Razonamiento y hoja de ruta (Microsoft 365, servicio alojado más adelante): [ADR 0012](docs/adr/0012-kit-autoalojado-en-lugar-de-servicio-alojado.md). Ficha del producto: [docs/MARKETPLACE_FICHA.md](docs/MARKETPLACE_FICHA.md). **English:** [README.en.md](README.en.md), [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md), [docs/MARKETPLACE_LISTING.en.md](docs/MARKETPLACE_LISTING.en.md).
 
-**Instalación guiada:** `tools/kit/instalar.sh` (Linux/macOS) o `.\tools\kit\instalar.ps1` (Windows) hace las preguntas, genera las claves y la configuración, arranca Docker Compose y verifica al final; la guía manual sigue siendo la opción B ([docs/INSTALACION.md](docs/INSTALACION.md), [ADR 0014](docs/adr/0014-asistente-de-instalacion-guiado.md)). Probado con pruebas automáticas y un `docker` falso, **no** con Docker real.
+**Instalación guiada:** `tools/kit/instalar.sh` (Linux/macOS) o `.\tools\kit\instalar.ps1` (Windows) hace las preguntas, genera las claves y la configuración, arranca Docker Compose y verifica al final; la guía manual sigue siendo la opción B ([docs/INSTALACION.md](docs/INSTALACION.md), [ADR 0014](docs/adr/0014-asistente-de-instalacion-guiado.md)). Probado con pruebas automáticas y un `docker` falso, y el kit arrancó con Docker Desktop real en Windows (contenedor «healthy», con claves de prueba); **no** se probó con una organización de Google Workspace real.
 
-**Estado:** se probó en Python (arranque, comprobaciones previas y pruebas automáticas); **no se ha probado con una organización de Google Workspace real**, y Docker/Compose/Caddy solo los ejercita el trabajo `kit` del CI. La demo pública no cambia: sigue siendo solo modo demo.
+**Estado:** se probó en Python (arranque, comprobaciones previas y pruebas automáticas); **no se ha probado con una organización de Google Workspace real**, y el trabajo `kit` del CI ejercita Docker/Compose/Caddy; la guía de Google Cloud no se ejecutó con una organización real. La demo pública no cambia: sigue siendo solo modo demo.
 
 ## Probarlo en tu computadora (modo demo)
 Requisitos: Python 3.12.

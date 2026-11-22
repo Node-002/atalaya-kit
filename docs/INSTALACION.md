@@ -82,7 +82,7 @@ Asistente de instalacion de Atalaya 1.0.0
 Listo.
 ```
 
-> **Estado honesto.** El asistente se probó con pruebas automáticas y un `docker` **falso** (orquestación, validaciones, que ningún secreto salga por pantalla ni por argumentos, permisos, copia de respaldo). **No se ejecutó contra Docker real ni con una organización de Google Workspace**; el trabajo `kit` del CI lo ejercita con Docker real al subir. Decisiones de diseño: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md).
+> **Estado honesto.** El asistente se probó con pruebas automáticas y un `docker` **falso** (orquestación, validaciones, que ningún secreto salga por pantalla ni por argumentos, permisos, copia de respaldo). **El kit sí arrancó con Docker Desktop real en Windows (contenedor «healthy», con claves de prueba); no se ejecutó con una organización de Google Workspace real**; el trabajo `kit` del CI lo ejercita con Docker real al subir. Decisiones de diseño: [ADR 0014](adr/0014-asistente-de-instalacion-guiado.md).
 
 ### Opción B: manual
 
