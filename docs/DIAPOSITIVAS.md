@@ -87,5 +87,5 @@
 ---
 ## Reserva (no se muestra salvo pregunta)
 - **R1. Capturas de la demo** (Resumen, campaña, diálogo de motivo, historial) por si falla la conexión.
-- **R2. Seguridad:** 512 pruebas pasan; ruff, bandit, pip-audit y gitleaks limpios; el CI construye y escanea la imagen y prueba el kit; prueba de intrusión propia, ZAP, ffuf, Nmap, Trivy y Lighthouse solo contra el propio equipo ([INFORME_ENDURECIMIENTO_21_NOV.md](INFORME_ENDURECIMIENTO_21_NOV.md), [INFORME_PENTEST_DEMO_21_NOV.md](INFORME_PENTEST_DEMO_21_NOV.md)).
+- **R2. Seguridad:** 569 pruebas pasan; ruff, bandit, pip-audit y gitleaks limpios; el CI construye y escanea la imagen y prueba el kit; prueba de intrusión propia, ZAP, ffuf, Nmap, Trivy y Lighthouse solo contra el propio equipo; pasada final con Semgrep ([INFORME_SEGURIDAD_FINAL_21_NOV.md](INFORME_SEGURIDAD_FINAL_21_NOV.md)) (informes previos: [INFORME_ENDURECIMIENTO_21_NOV.md](INFORME_ENDURECIMIENTO_21_NOV.md), [INFORME_PENTEST_DEMO_21_NOV.md](INFORME_PENTEST_DEMO_21_NOV.md)).
 - **R3. Cómo se usó la IA para programar:** [USO_DE_IA.md](USO_DE_IA.md).
