@@ -18,6 +18,7 @@ from typing import Literal
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import (
     FileResponse,
@@ -236,6 +237,11 @@ def create_app(
         if mode == "demo" and request.cookies.get(DEMO_ROLE_COOKIE) == "supervisor":
             return "supervisor"
         return "admin"
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request: Request, exc: RequestValidationError):
+        # El detalle por defecto expone la estructura del validador y repite el dato enviado.
+        return JSONResponse({"detail": "Datos no validos."}, status_code=422)
 
     @app.middleware("http")
     async def security(request: Request, call_next):

@@ -453,3 +453,11 @@ def test_english_documents_exist_and_keep_the_honest_warnings():
         )
     assert "to be defined" in listing and "HYPOTHESIS" in listing
     assert "AGPL-3.0" in listing and "Microsoft 365" in listing
+
+
+def test_verifier_only_accepts_web_addresses_for_the_health_check():
+    # urllib abre tambien file:// y ftp://: la direccion del operador debe ser http(s)
+    for direccion in ("file:///etc/passwd", "ftp://servidor", "gopher://x"):
+        resultado = verificar.check_health(direccion)
+        assert resultado[0][0] == verificar.FALLA
+        assert "http" in resultado[0][1]

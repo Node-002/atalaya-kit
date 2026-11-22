@@ -152,3 +152,18 @@ def test_two_hundred_mailboxes_poll_and_group_quickly():
     assert elapsed < 5
     done, failed = store.approve_many(found[0].alert_ids, "admin", None)
     assert len(done) == 100 and failed == 0
+
+
+def test_validation_errors_do_not_expose_validator_internals_or_echo_the_input(demo):
+    alert = demo.get("/api/alerts").json()[0]["id"]
+    for cuerpo in ('{"reason": 123}', '{"reason":', "[1, 2]"):
+        resp = demo.post(
+            f"/api/alerts/{alert}/reject",
+            content=cuerpo,
+            headers={"Content-Type": "application/json", "X-Requested-With": "atalaya"},
+        )
+        assert resp.status_code == 422
+        texto = resp.text
+        assert resp.json() == {"detail": "Datos no validos."}
+        for pista in ("loc", "pydantic", "input", "string_type", "json_invalid"):
+            assert pista not in texto
